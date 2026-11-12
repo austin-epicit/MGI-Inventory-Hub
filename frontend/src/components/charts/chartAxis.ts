@@ -14,6 +14,22 @@ export const CHART_TICK = { fill: "var(--color-chart-axis)", fontSize: 12 } as c
 /** Horizontal-only grid: the shared backdrop behind every plot on this tab. */
 export const CHART_GRID = { stroke: "var(--color-border-subtle)", vertical: false } as const;
 
+/**
+ * Category x-axis over a trend's periods. Band scale on every chart, line charts included:
+ * Recharts gives a line chart a point scale by default, which puts its dots at the plot edges
+ * while bars sit at band centres, so a line strip stacked under bars would drift off them.
+ */
+export const PERIOD_X_AXIS = {
+	dataKey: "label",
+	type: "category",
+	scale: "band",
+	axisLine: false,
+	tickLine: false,
+	tick: CHART_TICK,
+	interval: "preserveStartEnd",
+	minTickGap: 16,
+} as const;
+
 /** Below this width, a domain gets padded — see `resolveTimeDomain`. */
 const MIN_DOMAIN_SPAN_MS = 12 * 60 * 60 * 1000;
 

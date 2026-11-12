@@ -5,6 +5,7 @@ import { marginPct } from "../products/priceHistory.js";
 import { money, ymd } from "../products/queries.js";
 import { addDays, ymdToDbDate } from "../sync/dates.js";
 import { round4 } from "../sync/money.js";
+import { currentStockValue } from "../sync/snapshots.js";
 
 export const MOVER_WINDOW_DAYS = 180;
 const MOVERS_SHOWN = 10;
@@ -57,11 +58,8 @@ const dateBounds = (col: Prisma.Sql, w: Window): Prisma.Sql =>
 		: Prisma.sql`${col} IS NOT NULL AND ${col} <= ${w.to}::date`;
 
 async function stockKpis(db: Db): Promise<Pick<OverviewKpis, "stockValue" | "unitsOnHand">> {
-	const [r] = await db.$queryRaw<{ value: Prisma.Decimal; units: Prisma.Decimal }[]>`
-		SELECT COALESCE(SUM(s.on_hand * p.average_cost), 0) AS value,
-			COALESCE(SUM(s.on_hand), 0) AS units
-		FROM stock_level s JOIN product p ON p.id = s.product_id`;
-	return { stockValue: round4(Number(r!.value)), unitsOnHand: round4(Number(r!.units)) };
+	const { value, units } = await currentStockValue(db);
+	return { stockValue: value, unitsOnHand: units };
 }
 
 // Counted orders only: voided and draft ones never feed a KPI.

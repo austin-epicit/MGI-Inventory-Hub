@@ -10,6 +10,7 @@ import PurchaseDetailPage from "./features/purchases/PurchaseDetailPage";
 import PurchasesPage from "./features/purchases/PurchasesPage";
 import SaleDetailPage from "./features/sales/SaleDetailPage";
 import SalesPage from "./features/sales/SalesPage";
+import InsightsPage from "./features/insights/InsightsPage";
 import NotFoundPage from "./features/NotFoundPage";
 import OverviewPage from "./features/overview/OverviewPage";
 import SettingsPage from "./features/settings/SettingsPage";
@@ -25,6 +26,7 @@ export default function AppRoutes() {
 			<Route element={<RequireAuth />}>
 				<Route element={<AppLayout />}>
 					<Route index element={<OverviewPage />} />
+					<Route path="insights" element={<InsightsPage />} />
 					<Route path="products" element={<ProductsPage />} />
 					<Route
 						path="products/:id"

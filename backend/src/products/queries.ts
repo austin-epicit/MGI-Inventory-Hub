@@ -98,8 +98,8 @@ export async function listProducts(
 		const like = `%${escapeLike(q.search)}%`;
 		where.push(Prisma.sql`(p.sku ILIKE ${like} OR p.name ILIKE ${like})`);
 	}
-	if (q.category) where.push(Prisma.sql`p.category = ${q.category}`);
-	if (q.brand) where.push(Prisma.sql`p.brand = ${q.brand}`);
+	if (q.category) where.push(Prisma.sql`BTRIM(p.category) = BTRIM(${q.category})`);
+	if (q.brand) where.push(Prisma.sql`BTRIM(p.brand) = BTRIM(${q.brand})`);
 	if (q.status) where.push(Prisma.sql`p.status = ${q.status}`);
 	const whereSql = where.length
 		? Prisma.sql`WHERE ${Prisma.join(where, " AND ")}`
@@ -180,8 +180,11 @@ export async function productFacets(db: Db): Promise<{ categories: string[]; bra
 			select: { brand: true },
 		}),
 	]);
+	// Trimmed to match the filters and the breakdown keys, so a padded value is not listed twice.
 	const sorted = (xs: (string | null)[]) =>
-		xs.filter((x): x is string => !!x).sort((a, b) => a.localeCompare(b));
+		[...new Set(xs.map((x) => x?.trim()).filter((x): x is string => !!x))].sort(
+			(a, b) => a.localeCompare(b)
+		);
 	return {
 		categories: sorted(cats.map((c) => c.category)),
 		brands: sorted(brands.map((b) => b.brand)),

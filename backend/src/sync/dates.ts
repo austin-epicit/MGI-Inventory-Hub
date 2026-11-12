@@ -1,4 +1,6 @@
 import { parseCin7Stamp } from "../cin7/timestamps.js";
+import type { Db } from "../db.js";
+import { getCachedMe } from "./engine.js";
 
 export const parseCin7Timestamp = parseCin7Stamp;
 
@@ -56,4 +58,17 @@ export function addDays(ymd: string, days: number): string {
 	const d = ymdToDbDate(ymd);
 	d.setUTCDate(d.getUTCDate() + days);
 	return d.toISOString().slice(0, 10);
+}
+
+// Today's calendar day in the Cin7 zone, falling back to the configured zone, then UTC.
+export async function resolveToday(deps: {
+	db: Db;
+	clock?: () => Date;
+	timeZone?: string;
+}): Promise<string> {
+	const tz =
+		validTimeZone((await getCachedMe(deps.db))?.timeZone) ??
+		validTimeZone(deps.timeZone) ??
+		"UTC";
+	return zonedParts((deps.clock ?? (() => new Date()))(), tz).ymd;
 }

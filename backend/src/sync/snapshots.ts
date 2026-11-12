@@ -1,5 +1,7 @@
-import type { Prisma } from "../../generated/prisma/client.js";
-import { dec4 } from "./money.js";
+import { Prisma } from "../../generated/prisma/client.js";
+import type { Db } from "../db.js";
+import { ymdToDbDate } from "./dates.js";
+import { dec4, round4 } from "./money.js";
 
 type Tx = Prisma.TransactionClient;
 
@@ -34,4 +36,29 @@ export async function recordSnapshotIfChanged(
 		},
 	});
 	return true;
+}
+
+// What the whole store holds right now: on-hand � average cost, and the units behind it.
+export async function currentStockValue(db: Db): Promise<{ value: number; units: number }> {
+	const [r] = await db.$queryRaw<{ value: Prisma.Decimal; units: Prisma.Decimal }[]>`
+		SELECT COALESCE(SUM(s.on_hand * p.average_cost), 0) AS value,
+			COALESCE(SUM(s.on_hand), 0) AS units
+		FROM stock_level s JOIN product p ON p.id = s.product_id`;
+	return { value: round4(Number(r!.value)), units: round4(Number(r!.units)) };
+}
+
+// One row per calendar day: a later sync the same day overwrites it, so the day keeps its last reading.
+export async function recordStockValue(db: Db, day: string, now: Date): Promise<void> {
+	const { value, units } = await currentStockValue(db);
+	const data = {
+		value: dec4(value),
+		units: dec4(units),
+		source: "sync" as const,
+		recorded_at: now,
+	};
+	await db.stock_value_snapshot.upsert({
+		where: { day: ymdToDbDate(day) },
+		create: { day: ymdToDbDate(day), ...data },
+		update: data,
+	});
 }

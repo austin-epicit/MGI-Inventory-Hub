@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { PackageSearch } from "lucide-react";
 import Thumb from "../../components/ui/Thumb";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import AdaptableTable from "../../components/ui/AdaptableTable";
 import EmptyState from "../../components/ui/EmptyState";
 import FilterChips from "../../components/ui/FilterChips";
@@ -65,8 +65,9 @@ export default function ProductsPage() {
 	const navigate = useNavigate();
 	const [searchInput, setSearchInput] = useState("");
 	const search = useDebouncedValue(searchInput.trim());
-	const [category, setCategory] = useState<string | null>(null);
-	const [brand, setBrand] = useState<string | null>(null);
+	const [initial] = useSearchParams(); // deep links from Insights arrive as filters
+	const [category, setCategory] = useState<string | null>(() => initial.get("category"));
+	const [brand, setBrand] = useState<string | null>(() => initial.get("brand"));
 	const [status, setStatus] = useState<string | null>(null);
 	const [page, setPage] = useState(0);
 	const [pageSize, setPageSize] = useState(50);

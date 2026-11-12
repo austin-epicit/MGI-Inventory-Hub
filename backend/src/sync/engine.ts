@@ -33,12 +33,19 @@ import {
 	takeWalkStart,
 	type CursorEntity,
 } from "./cursors.js";
-import { parseCin7Date, parseCin7Timestamp, validTimeZone, zonedParts } from "./dates.js";
+import {
+	parseCin7Date,
+	parseCin7Timestamp,
+	resolveToday,
+	validTimeZone,
+	zonedParts,
+} from "./dates.js";
 import { Cin7DataError } from "./money.js";
 import { upsertProducts } from "./products.js";
 import { mapPurchase, upsertPurchase } from "./purchases.js";
 import { upsertReference } from "./reference.js";
 import { mapSale, upsertSale } from "./sales.js";
+import { recordStockValue } from "./snapshots.js";
 import { replaceStock } from "./stock.js";
 
 export type SyncKind = "backfill" | "incremental" | "reconcile" | "targeted";
@@ -595,7 +602,18 @@ async function syncStock(run: Run): Promise<void> {
 		}
 		const r = await replaceStock(run.deps.db, rows, problem === null, run.deps.clock());
 		bump(run, "stock", r.count);
-		if (!r.replaced) {
+		if (r.replaced) {
+			const { db, clock, timeZone } = run.deps;
+			await recordStockValue(
+				db,
+				await resolveToday({
+					db,
+					clock,
+					...(timeZone ? { timeZone } : {}),
+				}),
+				clock()
+			);
+		} else {
 			const why =
 				r.reason === "EMPTY_SWEEP"
 					? "Cin7 returned no stock rows"

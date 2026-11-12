@@ -57,20 +57,31 @@ const overview = (over: Partial<Overview> = {}): Overview => ({
 	...over,
 });
 
+// Empty points keep the card on its empty state, so jsdom never has to lay out a chart.
+const trend = {
+	period: "week",
+	from: "2026-02-01",
+	to: "2026-03-01",
+	totals: { sales: 777, purchases: 555, grossProfit: 100, grossMarginPct: 12.3 },
+	points: [],
+	mixKeys: [],
+};
+
 let data: Overview;
 let fetchSpy: MockInstance<typeof fetch>;
-const calls = () => fetchSpy.mock.calls.map(([u]) => String(u));
+const calls = () =>
+	fetchSpy.mock.calls.map(([u]) => String(u)).filter((u) => u.startsWith("/api/overview"));
 
 beforeEach(() => {
 	setFormatContext({ currency: "USD", timeZone: "America/Los_Angeles" });
 	data = overview();
-	fetchSpy = vi.spyOn(globalThis, "fetch").mockImplementation(
-		async () =>
-			new Response(JSON.stringify({ success: true, data, error: null }), {
-				status: 200,
-				headers: { "Content-Type": "application/json" },
-			})
-	);
+	fetchSpy = vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+		const body = String(input).startsWith("/api/insights/trend") ? trend : data;
+		return new Response(JSON.stringify({ success: true, data: body, error: null }), {
+			status: 200,
+			headers: { "Content-Type": "application/json" },
+		});
+	});
 });
 afterEach(() => vi.restoreAllMocks());
 
@@ -84,6 +95,23 @@ describe("OverviewPage", () => {
 		expect(screen.getByText("42.5%")).toBeInTheDocument();
 		expect(screen.getAllByText("Last 30 days")).toHaveLength(3);
 		expect(calls()).toEqual(["/api/overview?range=30d"]);
+	});
+
+	it("shows the trend card with a View insights link carrying the range", async () => {
+		render(<OverviewPage />);
+		expect(await screen.findByText("Sales and purchases")).toBeInTheDocument();
+		expect(await screen.findByText("Sales $777.00")).toBeInTheDocument();
+		expect(screen.getByRole("link", { name: "View insights" })).toHaveAttribute(
+			"href",
+			"/insights?range=30d"
+		);
+		await userEvent.setup().click(screen.getByRole("button", { name: "90d" }));
+		await waitFor(() =>
+			expect(screen.getByRole("link", { name: "View insights" })).toHaveAttribute(
+				"href",
+				"/insights?range=90d"
+			)
+		);
 	});
 
 	it("shows a dash for the margin when nothing sold", async () => {

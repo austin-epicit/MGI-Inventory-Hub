@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { ClipboardList } from "lucide-react";
 import AdaptableTable from "../../components/ui/AdaptableTable";
 import DateRangeFilter from "../../components/ui/DateRangeFilter";
@@ -44,7 +44,10 @@ export default function PurchasesPage() {
 	const [searchInput, setSearchInput] = useState("");
 	const search = useDebouncedValue(searchInput.trim());
 	const [status, setStatus] = useState<string | null>(null);
-	const [supplierId, setSupplierId] = useState<string | null>(null);
+	const [initial] = useSearchParams(); // deep links from Insights arrive as filters
+	const [supplierId, setSupplierId] = useState<string | null>(() =>
+		initial.get("supplierId")
+	);
 	const [dates, setDates] = useState<DateRangeValue>({ option: "all" });
 	const [page, setPage] = useState(0);
 	const [pageSize, setPageSize] = useState(50);
@@ -223,7 +226,7 @@ export default function PurchasesPage() {
 						: null,
 					supplierId
 						? {
-								label: `Supplier: ${supplierName ?? "Unknown"}`,
+								label: `Supplier: ${supplierName ?? (facets.data ? "Unknown" : "…")}`,
 								color: "blue" as const,
 								onRemove: () =>
 									filtered(setSupplierId)(

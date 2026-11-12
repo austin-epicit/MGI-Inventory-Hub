@@ -152,6 +152,13 @@ describe("GET /api/products", () => {
 		expect(ids(await list("?category=Tools&brand=Zed"))).toEqual([P2]);
 	});
 
+	it("category and brand filters match values stored with stray spaces", async () => {
+		await mkProduct(1, { category: "  Servers ", brand: " Dell  " });
+		await mkProduct(2);
+		expect(ids(await list("?category=Servers"))).toEqual([P1]);
+		expect(ids(await list("?brand=Dell"))).toEqual([P1]);
+	});
+
 	it("sort by lastSoldDate desc puts never-sold products last; asc too", async () => {
 		await mkProduct(1);
 		await mkProduct(2);
@@ -279,5 +286,12 @@ describe("GET /api/products/facets", () => {
 			categories: ["Parts", "Tools"],
 			brands: ["Acme", "Zed"],
 		});
+	});
+	it("trims padded values so facets do not list a value twice", async () => {
+		await mkProduct(1, { category: " Parts ", brand: "Acme " });
+		await mkProduct(2, { category: "Parts", brand: "Acme" });
+		const agent = await loginAs(testApp(), "v@example.com");
+		const res = await agent.get("/api/products/facets");
+		expect(res.body.data).toEqual({ categories: ["Parts"], brands: ["Acme"] });
 	});
 });

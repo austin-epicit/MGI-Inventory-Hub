@@ -152,6 +152,16 @@ describe("GET /api/sales", () => {
 		]);
 	});
 
+	it("tier filter matches a stored value with stray spaces; facets trim", async () => {
+		await mkSo({ n: 1, date: "2026-03-01", tier: " Wholesale " });
+		await mkSo({ n: 2, date: "2026-03-02", tier: "Wholesale" });
+		expect(numbers(await get("/api/sales?tier=Wholesale")).sort()).toEqual([
+			"SO-1",
+			"SO-2",
+		]);
+		expect((await get("/api/sales/facets")).body.data.tiers).toEqual(["Wholesale"]);
+	});
+
 	it("shows document total and base total on the row", async () => {
 		await mkSo({
 			n: 1,

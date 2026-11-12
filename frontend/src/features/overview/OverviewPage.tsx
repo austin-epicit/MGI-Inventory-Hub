@@ -12,6 +12,7 @@ import Thumb from "../../components/ui/Thumb";
 import { formatDate, formatDateTime, formatMoney, formatQty } from "../../lib/format";
 import type { PriceRange } from "../../types/priceHistory";
 import type { CostMover, RecentOrder } from "./api";
+import TrendCard from "../insights/TrendCard";
 import { useOverview } from "./hooks";
 
 const DEFAULT_RANGE: PriceRange = "30d";
@@ -232,6 +233,17 @@ export default function OverviewPage() {
 								hint={phrase}
 							/>
 						</div>
+						<TrendCard
+							range={range}
+							headerAction={
+								<Link
+									to={`/insights?range=${range}`}
+									className="text-xs text-text-link hover:underline"
+								>
+									View insights
+								</Link>
+							}
+						/>
 						<div className="grid gap-4 lg:grid-cols-2">
 							<Card
 								title="Biggest cost changes"

@@ -1,12 +1,15 @@
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import type { Logger } from "pino";
+import { Rng } from "../fixtures/rng.js";
 import { DEMO_DATASET, loadDemo } from "../src/cin7/sourceFactory.js";
 import { createDb, type Db } from "../src/db.js";
 import { processPendingImages } from "../src/images/store.js";
 import { log } from "../src/log.js";
 import { runSync, type SyncRunSummary } from "../src/sync/engine.js";
+import { addDays, resolveToday, ymdToDbDate } from "../src/sync/dates.js";
 import { dec4 } from "../src/sync/money.js";
+import { currentStockValue } from "../src/sync/snapshots.js";
 import { withSyncLock } from "../src/sync/scheduler.js";
 
 // The demo window is fixed in time, so the backfill reaches past BACKFILL_MONTHS to its start.
@@ -78,7 +81,34 @@ export async function seedDemo(
 		db.product_price_snapshot.deleteMany({ where: { source: "seed" } }),
 		db.product_price_snapshot.createMany({ data: rows }),
 	]);
+	await seedStockValueHistory(db, clock);
 	return { run, seedSnapshots: rows.length };
+}
+
+export const STOCK_HISTORY_DAYS = 180;
+
+// Walks back from today's value, ±2% a day, so the demo chart has a believable past to show.
+async function seedStockValueHistory(db: Db, clock: () => Date): Promise<void> {
+	const today = await resolveToday({ db, clock });
+	const now = clock();
+	const rng = new Rng(DEMO_DATASET.seed + 1);
+	let { value, units } = await currentStockValue(db);
+	const rows = Array.from({ length: STOCK_HISTORY_DAYS }, (_, i) => {
+		value *= 1 + rng.float(-0.02, 0.02);
+		units *= 1 + rng.float(-0.02, 0.02);
+		return {
+			day: ymdToDbDate(addDays(today, -(i + 1))),
+			value: dec4(value),
+			units: dec4(units),
+			source: "seed" as const,
+			recorded_at: now,
+		};
+	});
+	await db.$transaction([
+		db.stock_value_snapshot.deleteMany({ where: { source: "seed" } }),
+		// A live sync row on one of these days wins over the invented one.
+		db.stock_value_snapshot.createMany({ data: rows, skipDuplicates: true }),
+	]);
 }
 
 const TABLES = [
@@ -89,6 +119,7 @@ const TABLES = [
 	"product",
 	"product_image",
 	"product_price_snapshot",
+	"stock_value_snapshot",
 	"purchase",
 	"purchase_line",
 	"sale",

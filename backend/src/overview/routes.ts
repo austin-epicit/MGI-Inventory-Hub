@@ -4,8 +4,7 @@ import type { Db } from "../db.js";
 import { createSuccessResponse } from "../http/responses.js";
 import { validate } from "../http/validate.js";
 import { PRICE_RANGES, rangeFrom, type PriceRange } from "../products/priceHistory.js";
-import { validTimeZone, zonedParts } from "../sync/dates.js";
-import { getCachedMe } from "../sync/engine.js";
+import { resolveToday } from "../sync/dates.js";
 import { getOverview } from "./queries.js";
 
 const overviewQuery = z.object({
@@ -21,12 +20,7 @@ export const createOverviewRoutes = (
 
 	router.get("/", validate({ query: overviewQuery }), async (req, res) => {
 		const { range } = req.valid.query as { range: PriceRange };
-		// Calendar days in the Cin7 zone, as the price-history route resolves them.
-		const tz =
-			validTimeZone((await getCachedMe(deps.db))?.timeZone) ??
-			validTimeZone(deps.timeZone) ??
-			"UTC";
-		const today = zonedParts((deps.clock ?? (() => new Date()))(), tz).ymd;
+		const today = await resolveToday(deps);
 		res.json(
 			createSuccessResponse(
 				await getOverview(deps.db, {

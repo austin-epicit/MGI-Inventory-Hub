@@ -1,6 +1,13 @@
 import { useState } from "react";
 import { Outlet, useLocation } from "react-router-dom";
-import { Boxes, LayoutDashboard, Settings, ShoppingBag, ShoppingCart } from "lucide-react";
+import {
+	Boxes,
+	ChartColumn,
+	LayoutDashboard,
+	Settings,
+	ShoppingBag,
+	ShoppingCart,
+} from "lucide-react";
 import ToastViewport from "../components/ui/ToastViewport";
 import { useAuth } from "../auth/store";
 import { useSyncStatus } from "../features/settings/hooks";
@@ -40,6 +47,12 @@ export default function AppLayout() {
 							to="/"
 							icon={<LayoutDashboard size={ICON_SIZE} />}
 							label="Overview"
+						/>
+						<SideNavItem
+							expanded={expanded}
+							to="/insights"
+							icon={<ChartColumn size={ICON_SIZE} />}
+							label="Insights"
 						/>
 						<SideNavItem
 							expanded={expanded}

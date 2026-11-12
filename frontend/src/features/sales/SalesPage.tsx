@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Receipt } from "lucide-react";
 import AdaptableTable from "../../components/ui/AdaptableTable";
 import DateRangeFilter from "../../components/ui/DateRangeFilter";
@@ -44,8 +44,11 @@ export default function SalesPage() {
 	const [searchInput, setSearchInput] = useState("");
 	const search = useDebouncedValue(searchInput.trim());
 	const [status, setStatus] = useState<string | null>(null);
-	const [customerId, setCustomerId] = useState<string | null>(null);
-	const [tier, setTier] = useState<string | null>(null);
+	const [initial] = useSearchParams(); // deep links from Insights arrive as filters
+	const [customerId, setCustomerId] = useState<string | null>(() =>
+		initial.get("customerId")
+	);
+	const [tier, setTier] = useState<string | null>(() => initial.get("tier"));
 	const [dates, setDates] = useState<DateRangeValue>({ option: "all" });
 	const [page, setPage] = useState(0);
 	const [pageSize, setPageSize] = useState(50);
@@ -238,7 +241,7 @@ export default function SalesPage() {
 						: null,
 					customerId
 						? {
-								label: `Customer: ${customerName ?? "Unknown"}`,
+								label: `Customer: ${customerName ?? (facets.data ? "Unknown" : "…")}`,
 								color: "blue" as const,
 								onRemove: () =>
 									filtered(setCustomerId)(

@@ -1,4 +1,4 @@
-@theme {
+@theme static {
 	/* ── Backgrounds / Surfaces ──────────────────────────────────────────── */
 	/* Zinc Daylight v3: cool blue-gray canvas mirrors dark mode's zinc DNA.
 	   Structure from layer contrast, not border strokes. */
@@ -132,6 +132,18 @@
 	--color-chart-tier-2: #1baf7a; /* aqua */
 	--color-chart-tier-3: #6250d6; /* violet */
 	--color-chart-tier-4: #e87ba4; /* magenta */
+	/* Category series (sales mix), in slot order. dataviz validator vs #ffffff, adjacent pairs:
+	   pass, worst CVD dE 9.1. Slots 3-5 sit under 3:1, so the mix always carries a legend. */
+	--color-chart-cat-1: #2a78d6; /* blue */
+	--color-chart-cat-2: #eb6834; /* orange */
+	--color-chart-cat-3: #1baf7a; /* aqua */
+	--color-chart-cat-4: #eda100; /* yellow */
+	--color-chart-cat-5: #e87ba4; /* magenta */
+	--color-chart-cat-6: #008300; /* green */
+	/* Catch-alls stay neutral on purpose (validator's chroma floor flags them); checked
+	   against every slot that can sit next to them: worst dE 16.6, both >= 3:1. */
+	--color-chart-cat-other: #475569; /* slate-600 */
+	--color-chart-cat-uncategorised: #1e293b; /* slate-800 */
 }
 
 /* ── Dark mode overrides ──────────────────────────────────────────────────
@@ -204,6 +216,16 @@
 	--color-chart-tier-2: #199e70;
 	--color-chart-tier-3: #9085e9;
 	--color-chart-tier-4: #d55181;
+	/* Validated vs #18181b: worst CVD dE 8.4, all >= 3:1. Neutrals (checked against every
+	   neighbour slot and each other): worst CVD dE 8.5, both >= 3:1. */
+	--color-chart-cat-1: #3987e5;
+	--color-chart-cat-2: #d95926;
+	--color-chart-cat-3: #199e70;
+	--color-chart-cat-4: #c98500;
+	--color-chart-cat-5: #d55181;
+	--color-chart-cat-6: #008300;
+	--color-chart-cat-other: #a1a1aa; /* zinc-400 */
+	--color-chart-cat-uncategorised: #e4e4e7; /* zinc-200 */
 
 	/* Confirm (green action buttons) */
 	--color-confirm: #22c55e; /* green-500 — brighter on dark surfaces */

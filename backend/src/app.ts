@@ -10,6 +10,7 @@ import { requireSameOrigin } from "./http/origin.js";
 import { createSuccessResponse } from "./http/responses.js";
 import { createImageRoutes } from "./images/routes.js";
 import { log } from "./log.js";
+import { createInsightsRoutes } from "./insights/routes.js";
 import { createOverviewRoutes } from "./overview/routes.js";
 import { createProductRoutes } from "./products/routes.js";
 import { createPurchaseRoutes } from "./purchases/routes.js";
@@ -97,6 +98,7 @@ export const createApp = (deps: AppDeps): Express => {
 	api.use("/purchases", createPurchaseRoutes(deps, requireAuth));
 	api.use("/sales", createSaleRoutes(deps, requireAuth));
 	api.use("/overview", createOverviewRoutes(deps, requireAuth));
+	api.use("/insights", createInsightsRoutes(deps, requireAuth));
 
 	deps.extraRoutes?.(api);
 	app.use("/api", api);

@@ -78,7 +78,7 @@ export async function listSales(
 	}
 	if (q.status) where.push(Prisma.sql`s.status = ${q.status}`);
 	if (q.customerId) where.push(Prisma.sql`s.customer_id = ${q.customerId}::uuid`);
-	if (q.tier) where.push(Prisma.sql`s.price_tier_name = ${q.tier}`);
+	if (q.tier) where.push(Prisma.sql`BTRIM(s.price_tier_name) = BTRIM(${q.tier})`);
 	if (q.from) where.push(Prisma.sql`s.order_date >= ${q.from}::date`);
 	if (q.to) where.push(Prisma.sql`s.order_date <= ${q.to}::date`);
 	const whereSql = where.length
@@ -143,7 +143,10 @@ export async function saleFacets(db: Db): Promise<{
 		customers: customers
 			.map((c) => ({ id: c.customer_id!, name: c.customer_name }))
 			.sort((a, b) => byText(a.name, b.name)),
-		tiers: tiers.map((t) => t.price_tier_name!).sort(byText),
+		// Trimmed to match the tier filter, so a padded value is not listed twice.
+		tiers: [
+			...new Set(tiers.map((t) => t.price_tier_name!.trim()).filter(Boolean)),
+		].sort(byText),
 	};
 }
 

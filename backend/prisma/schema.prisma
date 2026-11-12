@@ -115,6 +115,14 @@ model product_price_snapshot {
   @@index([product_id, observed_at])
 }
 
+model stock_value_snapshot {
+  day         DateTime        @id @db.Date
+  value       Decimal         @db.Decimal(18, 4)
+  units       Decimal         @db.Decimal(18, 4)
+  source      snapshot_source
+  recorded_at DateTime        @db.Timestamptz(3)
+}
+
 enum image_status {
   pending
   stored
