@@ -1,0 +1,11 @@
+node_modules/
+dist/
+.env
+uploads/
+fixtures/.cache/
+.dev/
+backend/generated/
+docs/superpowers/
+coverage/
+*.log
+.env.prod

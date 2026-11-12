@@ -1,0 +1,307 @@
+datasource db {
+  provider = "postgresql"
+}
+
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+  // Node runs the compiled output as ESM, which needs explicit extensions.
+  moduleFormat        = "esm"
+  importFileExtension = "js"
+}
+
+model app_setting {
+  key        String   @id
+  value      Json
+  updated_at DateTime @default(now()) @updatedAt @db.Timestamptz(6)
+}
+
+enum user_role {
+  admin
+  viewer
+}
+
+model user {
+  id             String       @id @default(uuid()) @db.Uuid
+  email          String       @unique
+  name           String
+  password_hash  String?
+  role           user_role
+  deactivated_at DateTime?    @db.Timestamptz(6)
+  session_version Int         @default(0)
+  created_at     DateTime     @default(now()) @db.Timestamptz(6)
+  tokens         auth_token[]
+}
+
+model auth_token {
+  id         String    @id @default(uuid()) @db.Uuid
+  user_id    String    @db.Uuid
+  user       user      @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  kind       String
+  token_hash String    @unique
+  expires_at DateTime  @db.Timestamptz(6)
+  used_at    DateTime? @db.Timestamptz(6)
+
+  @@index([user_id])
+}
+
+model location {
+  id            String   @id @db.Uuid
+  name          String
+  is_deprecated Boolean  @default(false)
+  raw           Json
+  synced_at     DateTime @db.Timestamptz(3)
+}
+
+// code 1..10 = PriceTierN
+model price_tier {
+  code      Int      @id
+  name      String
+  synced_at DateTime @db.Timestamptz(3)
+}
+
+model supplier {
+  id               String    @id @db.Uuid
+  name             String
+  currency         String?
+  raw              Json
+  cin7_modified_at DateTime? @db.Timestamptz(3)
+  synced_at        DateTime  @db.Timestamptz(3)
+}
+
+model customer {
+  id               String    @id @db.Uuid
+  name             String
+  currency         String?
+  raw              Json
+  cin7_modified_at DateTime? @db.Timestamptz(3)
+  synced_at        DateTime  @db.Timestamptz(3)
+}
+
+model product {
+  id               String    @id @db.Uuid
+  sku              String
+  name             String
+  category         String?
+  brand            String?
+  type             String // Stock | Service
+  status           String // Active | Setup required | Deprecated
+  uom              String?
+  barcode          String?
+  average_cost     Decimal   @db.Decimal(18, 4)
+  tier_prices      Decimal[] @db.Decimal(18, 4) // [PriceTier1..PriceTier10]; 0 = not set
+  cin7_modified_at DateTime? @db.Timestamptz(3)
+  raw              Json
+  synced_at        DateTime  @db.Timestamptz(3)
+
+  @@index([sku])
+  @@index([category])
+  @@index([brand])
+}
+
+enum snapshot_source {
+  sync
+  seed
+}
+
+model product_price_snapshot {
+  id           BigInt          @id @default(autoincrement())
+  product_id   String          @db.Uuid
+  observed_at  DateTime        @db.Timestamptz(3)
+  average_cost Decimal         @db.Decimal(18, 4)
+  tier_prices  Decimal[]       @db.Decimal(18, 4)
+  source       snapshot_source
+
+  @@index([product_id, observed_at])
+}
+
+enum image_status {
+  pending
+  stored
+  skipped
+  failed
+}
+
+model product_image {
+  id           String       @id @db.Uuid // Cin7 attachment ID
+  product_id   String       @db.Uuid
+  file_name    String
+  content_type String
+  download_url String
+  position     Int
+  is_primary   Boolean      @default(false)
+  status       image_status @default(pending)
+  attempts     Int          @default(0)
+  error        String?
+  stored_at    DateTime?    @db.Timestamptz(3)
+
+  @@index([product_id])
+}
+
+model purchase {
+  id               String          @id @db.Uuid
+  order_number     String
+  type             String // Simple Purchase | Advanced Purchase | Service Purchase
+  status           String
+  order_status     String
+  counted          Boolean // authorised and not voided; the only rows charts/KPIs read
+  supplier_id      String?         @db.Uuid
+  supplier_name    String
+  order_date       DateTime?       @db.Date
+  currency         String
+  base_currency    String
+  currency_rate    Decimal         @db.Decimal(18, 6)
+  total            Decimal         @db.Decimal(18, 4)
+  total_base       Decimal         @db.Decimal(18, 4)
+  receiving_status String?
+  invoice_status   String?
+  cin7_updated_at  DateTime        @db.Timestamptz(3)
+  raw              Json
+  synced_at        DateTime        @db.Timestamptz(3)
+  lines            purchase_line[]
+
+  @@index([order_date])
+  @@index([supplier_id])
+}
+
+model purchase_line {
+  purchase_id    String   @db.Uuid
+  line_no        Int
+  product_id     String?  @db.Uuid
+  sku            String
+  name           String
+  quantity       Decimal  @db.Decimal(18, 4)
+  unit_price     Decimal  @db.Decimal(18, 4)
+  discount_pct   Decimal  @db.Decimal(5, 2)
+  unit_cost_base Decimal  @db.Decimal(18, 4)
+  total_base     Decimal  @db.Decimal(18, 4)
+  purchase       purchase @relation(fields: [purchase_id], references: [id], onDelete: Cascade)
+
+  @@id([purchase_id, line_no])
+  @@index([product_id])
+}
+
+model sale {
+  id               String      @id @db.Uuid
+  order_number     String
+  type             String // Simple Sale | Advanced Sale | Service Sale
+  status           String
+  order_status     String
+  counted          Boolean
+  customer_id      String?     @db.Uuid
+  customer_name    String
+  price_tier_name  String?
+  order_date       DateTime?   @db.Date
+  invoice_date     DateTime?   @db.Date
+  currency         String
+  base_currency    String
+  currency_rate    Decimal     @db.Decimal(18, 6)
+  total            Decimal     @db.Decimal(18, 4)
+  total_base       Decimal     @db.Decimal(18, 4)
+  cogs_base        Decimal?    @db.Decimal(18, 4)
+  invoice_status   String?
+  cin7_updated_at  DateTime    @db.Timestamptz(3)
+  raw              Json
+  synced_at        DateTime    @db.Timestamptz(3)
+  lines            sale_line[]
+
+  @@index([order_date])
+  @@index([customer_id])
+}
+
+model sale_line {
+  sale_id         String   @db.Uuid
+  line_no         Int
+  product_id      String?  @db.Uuid
+  sku             String
+  name            String
+  quantity        Decimal  @db.Decimal(18, 4)
+  unit_price      Decimal  @db.Decimal(18, 4)
+  discount_pct    Decimal  @db.Decimal(5, 2)
+  unit_price_base Decimal  @db.Decimal(18, 4)
+  average_cost    Decimal? @db.Decimal(18, 4)
+  total_base      Decimal  @db.Decimal(18, 4)
+  sale            sale     @relation(fields: [sale_id], references: [id], onDelete: Cascade)
+
+  @@id([sale_id, line_no])
+  @@index([product_id])
+}
+
+model stock_level {
+  product_id    String   @db.Uuid
+  location_name String
+  bin           String   @default("")
+  batch         String   @default("")
+  on_hand       Decimal  @db.Decimal(18, 4)
+  allocated     Decimal  @db.Decimal(18, 4)
+  available     Decimal  @db.Decimal(18, 4)
+  on_order      Decimal  @db.Decimal(18, 4)
+  in_transit    Decimal  @db.Decimal(18, 4)
+  synced_at     DateTime @db.Timestamptz(3)
+
+  @@id([product_id, location_name, bin, batch])
+}
+
+model cin7_connection {
+  id                  Int       @id @default(1)
+  account_id_enc      String
+  application_key_enc String
+  verified_at         DateTime? @db.Timestamptz(3)
+  webhook_path_token  String?
+  webhook_bearer_enc  String?
+  updated_at          DateTime  @updatedAt @db.Timestamptz(3)
+}
+
+model sync_cursor {
+  entity          String    @id
+  last_success_at DateTime? @db.Timestamptz(3)
+  backfill_page   Int       @default(0)
+  backfill_done   Boolean   @default(false)
+}
+
+enum sync_status {
+  running
+  ok
+  partial
+  failed
+}
+
+model sync_run {
+  id          BigInt      @id @default(autoincrement())
+  kind        String
+  trigger     String
+  status      sync_status
+  started_at  DateTime    @db.Timestamptz(3)
+  finished_at DateTime?   @db.Timestamptz(3)
+  api_calls   Int         @default(0)
+  counts      Json        @default("{}")
+  errors      Json        @default("[]")
+  error_code  String?
+
+  @@index([started_at])
+}
+
+// A record that failed to sync; its row is removed once it syncs. From 3 attempts on it is
+// quarantined: still retried when it reappears, but it no longer holds back its entity's cursor.
+model sync_record_failure {
+  entity          String
+  record_id       String
+  attempts        Int
+  last_code       String
+  last_message    String
+  first_failed_at DateTime @db.Timestamptz(3)
+  last_failed_at  DateTime @db.Timestamptz(3)
+
+  @@id([entity, record_id])
+}
+
+model webhook_event {
+  id          BigInt   @id @default(autoincrement())
+  type        String
+  record_ids  String[]
+  received_at DateTime @db.Timestamptz(3)
+  status      String
+  error       String?
+
+  @@index([received_at])
+}

@@ -1,0 +1,2 @@
+docker/*.sh text eol=lf
+frontend/Caddyfile text eol=lf

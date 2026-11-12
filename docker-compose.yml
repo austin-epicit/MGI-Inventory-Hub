@@ -1,0 +1,69 @@
+services:
+  db:
+    image: postgres:17
+    environment:
+      POSTGRES_HOST_AUTH_METHOD: trust
+      POSTGRES_DB: mgi
+    ports:
+      - "5440:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./docker/init-test-db.sql:/docker-entrypoint-initdb.d/init-test-db.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d mgi"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build: ./backend
+    ports:
+      - "3100:3100"
+    env_file:
+      - ./backend/.env
+    environment:
+      # Container-side values; these outrank env_file on purpose.
+      NODE_ENV: production
+      DATABASE_URL: postgresql://postgres@db:5432/mgi
+      UPLOADS_DIR: /data/uploads
+      # This local stack serves the demo dataset on purpose; it has no effect once
+      # backend/.env sets CIN7_SOURCE=http.
+      ALLOW_DEMO_DATA: "true"
+    volumes:
+      - uploads:/data/uploads
+    depends_on:
+      db:
+        condition: service_healthy
+
+  web:
+    build:
+      context: ./frontend
+      target: dev
+    ports:
+      - "5180:5180"
+    environment:
+      API_PROXY_TARGET: http://api:3100
+    depends_on:
+      - api
+
+  fake-cin7:
+    build: ./backend
+    command: ["npm", "run", "fake-cin7"]
+    environment:
+      FAKE_CIN7_PORT: "4010"
+      FAKE_CIN7_ACCOUNT_ID: fake-account-id
+      FAKE_CIN7_APPLICATION_KEY: fake-application-key
+      # A second host name for the same container: attachment URLs on it get no API key, like a
+      # pre-signed storage URL (127.0.0.1 would be the api container itself).
+      FAKE_CIN7_FILES_ORIGIN: http://files.fake-cin7:4010
+    networks:
+      default:
+        aliases:
+          - files.fake-cin7
+    ports:
+      - "4010:4010"
+    profiles: ["fake"]
+
+volumes:
+  pgdata:
+  uploads:

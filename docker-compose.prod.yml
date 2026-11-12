@@ -1,0 +1,117 @@
+# Production stack. Run with the secrets file:
+#   docker compose --env-file .env.prod -f docker-compose.prod.yml up -d --build
+# Copy .env.prod.example to .env.prod first; .env.prod is never committed.
+
+x-logging: &logging
+  driver: json-file
+  options:
+    # Docker rotates by size, not age: 14 files x 50 MB per service (see README for the 14-day mapping).
+    max-size: "50m"
+    max-file: "14"
+
+services:
+  db:
+    image: postgres:17.6
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: mgi
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env.prod}
+      POSTGRES_DB: mgi
+    # The sync lock is an advisory lock held by one long idle-in-transaction connection.
+    # idle_in_transaction_session_timeout must stay 0 (off) or lower than no sync run; the
+    # keepalives stop an idle NAT/proxy between api and db from silently dropping that connection.
+    command:
+      - postgres
+      - -c
+      - idle_in_transaction_session_timeout=0
+      - -c
+      - tcp_keepalives_idle=60
+      - -c
+      - tcp_keepalives_interval=10
+      - -c
+      - tcp_keepalives_count=6
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mgi -d mgi"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    logging: *logging
+
+  api:
+    build: ./backend
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      CIN7_SOURCE: http
+      ALLOW_DEMO_DATA: "false"
+      # One proxy hop (Caddy); without it every client shares Caddy's IP in the rate limits.
+      TRUST_PROXY: "1"
+      PORT: "3100"
+      UPLOADS_DIR: /data/uploads
+      DATABASE_URL: postgresql://mgi:${POSTGRES_PASSWORD}@db:5432/mgi
+      JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env.prod}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY:?set ENCRYPTION_KEY in .env.prod}
+      SETUP_TOKEN: ${SETUP_TOKEN:?set SETUP_TOKEN in .env.prod}
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:?set PUBLIC_BASE_URL in .env.prod}
+      APP_TIMEZONE: ${APP_TIMEZONE:-America/Los_Angeles}
+      SESSION_TTL_HOURS: ${SESSION_TTL_HOURS:-12}
+      BACKFILL_MONTHS: ${BACKFILL_MONTHS:-24}
+    volumes:
+      - uploads:/data/uploads
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:3100/api/health || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 90s
+    logging: *logging
+
+  web:
+    build:
+      context: ./frontend
+      target: prod
+    restart: unless-stopped
+    environment:
+      DOMAIN: ${DOMAIN:?set DOMAIN in .env.prod}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - api
+    logging: *logging
+
+  backup:
+    image: postgres:17.6
+    restart: unless-stopped
+    entrypoint: ["sh", "/backup.sh"]
+    environment:
+      PGHOST: db
+      PGUSER: mgi
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+      PGDATABASE: mgi
+      RETENTION_DAYS: "30"
+      BACKUP_HOUR_UTC: ${BACKUP_HOUR_UTC:-3}
+    volumes:
+      - ./docker/backup.sh:/backup.sh:ro
+      - uploads:/uploads:ro
+      - backups:/backups
+    depends_on:
+      db:
+        condition: service_healthy
+    logging: *logging
+
+volumes:
+  pgdata:
+  uploads:
+  backups:
+  caddy_data:
+  caddy_config:

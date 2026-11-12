@@ -1,0 +1,27 @@
+# Serves the built SPA and proxies /api to the api service. Certificates are automatic:
+# Caddy needs DOMAIN to resolve to this host with ports 80 and 443 reachable from the internet.
+{$DOMAIN} {
+	encode zstd gzip
+
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "same-origin"
+		-Server
+	}
+
+	handle /api/* {
+		reverse_proxy api:3100
+	}
+
+	handle {
+		root * /srv
+		# Vite fingerprints /assets, so those cache forever; index.html must always be re-fetched.
+		@assets path /assets/*
+		header @assets Cache-Control "public, max-age=31536000, immutable"
+		@shell not path /assets/*
+		header @shell Cache-Control "no-cache"
+		try_files {path} /index.html
+		file_server
+	}
+}

@@ -1,0 +1,214 @@
+@theme {
+	/* ── Backgrounds / Surfaces ──────────────────────────────────────────── */
+	/* Zinc Daylight v3: cool blue-gray canvas mirrors dark mode's zinc DNA.
+	   Structure from layer contrast, not border strokes. */
+	--color-canvas: #e6eaf0; /* page floor — darkened so it sits clearly below surface (was #edf0f4) */
+	--color-base: #ffffff; /* brightest card/panel layer */
+	--color-surface: #fafcfe; /* secondary layer — near-white, 5 units off base (was #f5f7fa) */
+	--color-surface-raised: #f0f3f7; /* hover/selected — now DARKER than surface, see note (was #fdfeff) */
+	--color-surface-inset: #dde2ea; /* recessed wells/inputs — brightened, still below canvas (was #d3d9e3) */
+
+	/* ── Text ────────────────────────────────────────────────────────────── */
+	/* Slate hierarchy — cool authority, matches dark mode's zinc personality */
+	--color-text-primary: #0f172a; /* slate-900 */
+	--color-text-secondary: #334155; /* slate-700 */
+	--color-text-tertiary: #475569; /* slate-600 */
+	--color-text-muted: #64748b; /* slate-500 */
+	--color-text-faint: #6b7a90; /* ~4.5:1 on white for real text (was #7c8ea6, ~3.3:1) */
+	--color-text-inverse: #ffffff;
+	--color-text-link: #2563eb;
+	--color-text-on-surface: #475569; /* slate-600 */
+
+	/* ── Primary (blue) ──────────────────────────────────────────────────── */
+	--color-primary: #3b82f6;
+	--color-primary-hover: #2563eb;
+	--color-primary-active: #1d4ed8;
+	--color-primary-bg: rgba(59, 130, 246, 0.1);
+	--color-primary-bg-subtle: rgba(59, 130, 246, 0.06);
+	--color-primary-bg-dim: rgba(59, 130, 246, 0.03);
+	--color-primary-border: rgba(59, 130, 246, 0.2);
+	--color-primary-text: #1d4ed8;
+	--color-on-primary: #ffffff;
+	--color-primary-disabled: #1e40af;
+
+	/* ── Borders ─────────────────────────────────────────────────────────── */
+	/* Quiet by default — elevation comes from stepped surfaces + shadow, not strokes */
+	--color-border-subtle: #e2e6ec; /* section dividers — a whisper (was #c5d1e5) */
+	--color-border: #d0d6df; /* default edge — light + desaturated (was #8fa6bf) */
+	--color-border-strong: #b2bcc9; /* emphasized edge — still clearly present (was #6080a0) */
+	--color-border-card: #e2e6ec; /* card edge — matches subtle (was #b5c4db) */
+	--color-border-input: #a6b0be; /* input — firm field boundary, no longer navy (was #5e7a98) */
+
+	/* ── Identity / avatar ────────────────────────────────────────────────── */
+	/* Deliberately NOT a border token. Avatar fills used to borrow --color-border
+	   and --color-border-strong, which is also where status accents come from, so
+	   a neutral status underline resolved to the exact color of the fill it sat
+	   on and just made the square look rectangular. Separate family, collision
+	   cannot recur. Dark enough for white text in every palette — border-strong
+	   is near-white here and measured 1.9:1. */
+	--color-avatar-bg: #64748b; /* 4.76:1 against --color-avatar-fg */
+	--color-avatar-fg: #ffffff;
+
+	/* ── Overlay / modal backdrop ─────────────────────────────────────────────── */
+	--color-overlay: rgba(9, 9, 11, 0.6);
+
+	/* ── Confirm CTA (green action buttons) ──────────────────────────────── */
+	--color-confirm: #16a34a;
+	--color-confirm-hover: #15803d;
+
+	/* ── Status: success ─────────────────────────────────────────────────── */
+	--color-success: #059669;
+	--color-success-text: #15803d;
+	--color-success-bg: rgba(5, 150, 105, 0.1);
+	--color-success-border: rgba(5, 150, 105, 0.22);
+	--color-success-bright-text: #15803d;
+
+	/* ── Status: error ───────────────────────────────────────────────────── */
+	--color-error: #ef4444;
+	--color-error-strong: #dc2626;
+	--color-error-text: #b91c1c;
+	--color-error-bg: rgba(239, 68, 68, 0.1);
+	--color-error-border: rgba(239, 68, 68, 0.22);
+
+	/* ── Status: warning ─────────────────────────────────────────────────── */
+	--color-warning: #d97706;
+	--color-warning-text: #92400e;
+	--color-warning-bg: rgba(217, 119, 6, 0.1);
+	--color-warning-border: rgba(217, 119, 6, 0.22);
+	--color-on-warning: #ffffff; /* text on a solid --color-warning fill */
+
+	/* ── Status: info ────────────────────────────────────────────────────── */
+	--color-info: #0891b2;
+	--color-info-text: #0e7490;
+	--color-info-bg: rgba(8, 145, 178, 0.1);
+	--color-info-border: rgba(8, 145, 178, 0.22);
+
+	/* ── Status: reviewing (purple) ──────────────────────────────────────── */
+	--color-reviewing: #7c3aed;
+	--color-reviewing-text: #6d28d9;
+	--color-reviewing-bg: rgba(124, 58, 237, 0.1);
+	--color-reviewing-border: rgba(124, 58, 237, 0.22);
+
+	/* ── Status: rejected (rose) ─────────────────────────────────────────── */
+	--color-rejected: #e11d48;
+	--color-rejected-text: #be123c;
+	--color-rejected-bg: rgba(225, 29, 72, 0.1);
+	--color-rejected-border: rgba(225, 29, 72, 0.22);
+
+	/* ── Status: neutral (draft, inactive, low-priority) ────────────────── */
+	--color-neutral: #64748b; /* slate-500 */
+
+	/* ── Status: orange (expired, disputed, high-priority) ──────────────── */
+	--color-orange: #ea580c;
+	--color-orange-text: #9a3412;
+	--color-orange-bg: rgba(234, 88, 12, 0.1);
+	--color-orange-border: rgba(234, 88, 12, 0.22);
+
+	/* ── Schedule grid (table and chart chrome) ──────────────────────────────────── */
+	/* Deliberately NOT the --color-border family. The board floor is --color-canvas,
+	   and in light palettes border/border-subtle land within ~1.2:1 of it, so grid
+	   lines vanished. These carry their own light values tuned against canvas;
+	   dark values reproduce exactly what each call site resolved to before. */
+	--color-grid-line: #bac3d1; /* month cell edges, weekday header rule — 1.47:1 on canvas */
+	--color-grid-line-strong: #b0bac9; /* week column edges, hour lines, header rules */
+	--color-grid-line-minor: #dbe1e9; /* week half-hour lines — must stay DARKER than canvas */
+	--color-grid-cell-muted: #dde2ea; /* other-month cells — recede, never brighter than in-month */
+	--color-grid-today-tint: rgba(59, 130, 246, 0.1);
+	--color-grid-float-bg: #ffffff; /* overlays/chips floating ON the grid — must not equal canvas */
+
+	/* ── Chart tokens ─────────────────────────────────────────────────────── */
+	--color-chart-primary: #2563eb;
+	--color-chart-success: #059669;
+	--color-chart-warning: #d97706;
+	--color-chart-info: #0891b2;
+	--color-chart-error: #dc2626;
+	--color-chart-fallback: #e3e8f0; /* matches base */
+	--color-chart-axis: #64748b; /* slate-500 */
+	--color-chart-hole-bg: #edf0f5; /* matches canvas */
+	/* Price-tier series, in slot order. Validated with --color-chart-warning (cost) as the
+	   series before slot 1 (dataviz validator, adjacent pairs). Slots 2 and 4 sit under 3:1 on
+	   white, so every tier line carries a direct end label. */
+	--color-chart-tier-1: #2a78d6; /* blue */
+	--color-chart-tier-2: #1baf7a; /* aqua */
+	--color-chart-tier-3: #6250d6; /* violet */
+	--color-chart-tier-4: #e87ba4; /* magenta */
+}
+
+/* ── Dark mode overrides ──────────────────────────────────────────────────
+ * Applied when data-theme="dark" on <html>. Overrides the light @theme
+ * defaults above. Toggle: document.documentElement.dataset.theme = "dark"
+ * No component files need to change — only this file.
+ * ─────────────────────────────────────────────────────────────────────── */
+[data-theme="dark"] {
+	/* Surfaces */
+	--color-canvas: #09090b;
+	--color-base: #18181b;
+	--color-surface: #111115; /* recessed layer — sits between canvas and base, closer to canvas */
+	--color-surface-raised: #3f3f46;
+	--color-surface-inset: #09090b;
+
+	/* Text */
+	--color-text-primary: #ffffff;
+	--color-text-secondary: #e4e4e7; /* zinc-200 — was zinc-300 */
+	--color-text-tertiary: #c4c4c8; /* custom zinc-300/400 mid — was zinc-400 */
+	--color-text-muted: #a1a1aa; /* zinc-400 — was zinc-500 (~4:1 → ~7.7:1) */
+	--color-text-faint: #82828b; /* was zinc-500 #71717a (~3.66:1, failed WCAG AA) — now ~4.65:1 on #18181b */
+	--color-text-inverse: #18181b;
+	--color-text-link: #3b82f6;
+	--color-text-on-surface: #e4e4e7;
+	--color-success-bright-text: #4ade80;
+
+	/* Primary tints (adjusted opacity for dark) */
+	--color-primary-bg: rgba(59, 130, 246, 0.2);
+	--color-primary-bg-subtle: rgba(59, 130, 246, 0.1);
+	--color-primary-bg-dim: rgba(59, 130, 246, 0.06);
+	--color-primary-border: rgba(59, 130, 246, 0.3);
+	--color-primary-text: #93c5fd;
+
+	/* Overlay */
+	--color-overlay: rgba(9, 9, 11, 0.75);
+
+	/* Borders */
+	--color-border-subtle: #3f3f46; /* zinc-700 — faint divider, 1 step above surface */
+	--color-border: #52525b; /* zinc-600 — clearly visible at 1px, ~2:1 on surface */
+	--color-border-strong: #71717a; /* zinc-500 — emphasized, ~3.3:1 on surface */
+	--color-border-card: #48484f; /* card edge — between subtle and default */
+	--color-border-input: #717179; /* input — zinc-500 tier, strong field boundary */
+
+	/* Identity / avatar */
+	--color-avatar-bg: #3f3f46; /* zinc-700 — 10.4:1 with white, two steps above --color-base */
+	--color-avatar-fg: #ffffff;
+
+	/* Status badge text */
+	--color-success-text: #34d399;
+	--color-error-text: #f87171;
+	--color-warning-text: #fbbf24;
+	--color-info-text: #67e8f9;
+	--color-reviewing-text: #a78bfa;
+	--color-rejected-text: #fb7185;
+	--color-orange-text: #fb923c;
+
+	/* Schedule grid — reproduces the pre-token dark appearance exactly */
+	--color-grid-line: #3f3f46; /* was --color-border-subtle */
+	--color-grid-line-strong: #52525b; /* was --color-border */
+	--color-grid-line-minor: #111115; /* was --color-surface */
+	--color-grid-cell-muted: #18181b; /* was --color-base */
+	--color-grid-today-tint: rgba(59, 130, 246, 0.04);
+	--color-grid-float-bg: #09090b; /* was --color-canvas */
+
+	/* Charts */
+	--color-chart-fallback: #3f3f46;
+	--color-chart-axis: #a1a1aa;
+	--color-chart-hole-bg: #121212;
+	--color-chart-tier-1: #3987e5;
+	--color-chart-tier-2: #199e70;
+	--color-chart-tier-3: #9085e9;
+	--color-chart-tier-4: #d55181;
+
+	/* Confirm (green action buttons) */
+	--color-confirm: #22c55e; /* green-500 — brighter on dark surfaces */
+	--color-confirm-hover: #16a34a; /* green-600 */
+
+	/* Animation intermediates (not Tailwind tokens — kept in sync with index.css :root) */
+	--anim-surface-flash: rgba(63, 63, 70, 0.4);
+}

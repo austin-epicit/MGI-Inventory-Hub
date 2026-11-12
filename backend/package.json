@@ -1,0 +1,53 @@
+{
+	"name": "mgi-inventory-hub-backend",
+	"version": "1.0.0",
+	"private": true,
+	"type": "module",
+	"engines": {
+		"node": ">=22"
+	},
+	"scripts": {
+		"dev": "tsx watch src/server.ts",
+		"build": "prisma generate && tsc --noCheck -p tsconfig.build.json",
+		"start": "node dist/src/server.js",
+		"test": "vitest run",
+		"test:watch": "vitest",
+		"typecheck": "tsc --noEmit",
+		"lint": "eslint .",
+		"migrate:deploy": "prisma migrate deploy",
+		"seed": "tsx prisma/seed.ts",
+		"fake-cin7": "tsx fixtures/fake-cin7/main.ts"
+	},
+	"dependencies": {
+		"@prisma/adapter-pg": "7.8.0",
+		"@prisma/client": "7.8.0",
+		"bcryptjs": "^2.4.3",
+		"cookie-parser": "1.4.7",
+		"dotenv": "17.2.3",
+		"express": "5.2.1",
+		"express-rate-limit": "^8.7.1",
+		"jsonwebtoken": "^9.0.3",
+		"pino": "9.14.0",
+		"pino-http": "10.4.0",
+		"sharp": "0.35.5",
+		"zod": "4.3.6"
+	},
+	"devDependencies": {
+		"@eslint/js": "9.39.2",
+		"@types/bcryptjs": "^2.4.6",
+		"@types/cookie-parser": "1.4.10",
+		"@types/express": "5.0.5",
+		"@types/jsonwebtoken": "^9.0.10",
+		"@types/node": "24.10.2",
+		"@types/supertest": "7.2.1",
+		"eslint": "9.39.2",
+		"globals": "17.14.0",
+		"prettier": "3.7.4",
+		"prisma": "7.8.0",
+		"supertest": "7.3.2",
+		"tsx": "4.19.0",
+		"typescript": "5.9.3",
+		"typescript-eslint": "8.72.2",
+		"vitest": "4.0.18"
+	}
+}

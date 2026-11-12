@@ -1,0 +1,79 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main, dev]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend (typecheck, lint, tests, migrations)
+    runs-on: ubuntu-latest
+    env:
+      # prisma.config.ts resolves DATABASE_URL at load, so even `prisma generate` needs one
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/mgi
+      TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/mgi_test
+    defaults:
+      run:
+        working-directory: backend
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: mgi
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - run: npm ci
+      - name: Generate Prisma client
+        run: npx prisma generate
+      - name: Create test database
+        run: psql "postgresql://postgres:postgres@localhost:5432/postgres" -c "CREATE DATABASE mgi_test"
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Lint
+        run: npm run lint
+      - name: Tests
+        run: npm test
+      - name: Apply migrations to a fresh database
+        run: npx prisma migrate deploy
+      - name: Validate migrations match schema (no drift)
+        run: npx prisma migrate diff --from-config-datasource --to-schema prisma/schema.prisma --exit-code
+
+  frontend:
+    name: Frontend (typecheck, lint, tests, build)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - name: Typecheck
+        run: npx tsc --noEmit -p tsconfig.app.json
+      - name: Lint
+        run: npm run lint
+      - name: Unit tests
+        run: npx vitest run
+      - name: Build
+        run: npm run build
