@@ -25,7 +25,7 @@ const open = async () => {
 	render(<UserMenu />);
 	const user = userEvent.setup();
 	await user.click(screen.getByRole("button", { name: "User menu" }));
-	await user.click(screen.getByRole("button", { name: /log out/i }));
+	await user.click(screen.getByRole("menuitem", { name: /sign out/i }));
 };
 
 afterEach(() => {
@@ -52,5 +52,58 @@ describe("UserMenu logout", () => {
 		vi.spyOn(globalThis, "fetch").mockResolvedValue(reply(200));
 		await open();
 		await vi.waitFor(() => expect(useAuth.getState().user).toBeNull());
+	});
+});
+
+describe("UserMenu a11y and busy state", () => {
+	it("exposes menu semantics and disables Sign out while pending", async () => {
+		let release: () => void = () => undefined;
+		vi.spyOn(globalThis, "fetch").mockImplementation(
+			() =>
+				new Promise<Response>((r) => {
+					release = () => r(reply(200));
+				})
+		);
+		act(() =>
+			useAuth.setState({
+				user: { id: "1", email: "a@b.c", name: "Ann", role: "viewer" },
+			})
+		);
+		render(<UserMenu />);
+		const user = userEvent.setup();
+		const trigger = screen.getByRole("button", { name: "User menu" });
+		expect(trigger).toHaveAttribute("aria-haspopup", "menu");
+		await user.click(trigger);
+		const theme = screen.getByRole("menuitem", { name: /theme/i });
+		expect(theme).toHaveAttribute("aria-expanded", "false");
+		await user.click(theme);
+		expect(theme).toHaveAttribute("aria-expanded", "true");
+		expect(screen.getByRole("menuitemradio", { name: "System" })).toHaveAttribute(
+			"aria-checked",
+			"true"
+		);
+		expect(screen.getByRole("menuitemradio", { name: "Dark" })).toHaveAttribute(
+			"aria-checked",
+			"false"
+		);
+		await user.click(screen.getByRole("menuitem", { name: "Sign out" }));
+		expect(screen.getByRole("menuitem", { name: /signing out/i })).toBeDisabled();
+		release();
+	});
+
+	it("closes on Escape and returns focus to the trigger", async () => {
+		act(() =>
+			useAuth.setState({
+				user: { id: "1", email: "a@b.c", name: "Ann", role: "viewer" },
+			})
+		);
+		render(<UserMenu />);
+		const user = userEvent.setup();
+		const trigger = screen.getByRole("button", { name: "User menu" });
+		await user.click(trigger);
+		expect(screen.getByRole("menu")).toBeInTheDocument();
+		await user.keyboard("{Escape}");
+		expect(screen.queryByRole("menu")).toBeNull();
+		expect(trigger).toHaveFocus();
 	});
 });

@@ -24,7 +24,13 @@ export function toCsv<T>(columns: CsvColumn<T>[], rows: T[]): string {
 }
 
 export function downloadCsv<T>(filename: string, columns: CsvColumn<T>[], rows: T[]): void {
-	const blob = new Blob([toCsv(columns, rows)], { type: "text/csv;charset=utf-8" });
+	downloadBlob(
+		filename,
+		new Blob([toCsv(columns, rows)], { type: "text/csv;charset=utf-8" })
+	);
+}
+
+export function downloadBlob(filename: string, blob: Blob): void {
 	const url = URL.createObjectURL(blob);
 	const a = document.createElement("a");
 	a.href = url;
@@ -33,6 +39,15 @@ export function downloadCsv<T>(filename: string, columns: CsvColumn<T>[], rows: 
 	a.click();
 	a.remove();
 	setTimeout(() => URL.revokeObjectURL(url), 0); // revoking inside the click can cancel the download
+}
+
+/** Filename for a server export: the Content-Disposition name, else `mgi-<name>-<date>.csv`
+ * with <name> taken from the export URL (`/api/products/export.csv` -> products). */
+export function exportFilename(disposition: string | null, href: string): string {
+	const named = disposition?.match(/filename="?([^";]+)"?/i)?.[1]?.trim();
+	if (named) return named;
+	const name = href.split("?")[0].split("/").slice(-2, -1)[0] || "export";
+	return `mgi-${name}-${localYmd()}.csv`;
 }
 
 /** The browser's local calendar date, for filenames. */

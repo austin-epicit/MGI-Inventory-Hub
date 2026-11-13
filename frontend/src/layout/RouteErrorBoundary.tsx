@@ -26,7 +26,7 @@ export default class RouteErrorBoundary extends Component<Props, State> {
 		if (!this.state.failed) return this.props.children;
 		return (
 			<EmptyState
-				title="This page could not be displayed"
+				title="This page couldn't be displayed"
 				description="Something went wrong while drawing it. Try again, or pick another page."
 				action={{
 					label: "Reload",

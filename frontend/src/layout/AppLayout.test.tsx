@@ -77,7 +77,7 @@ describe("AppLayout error boundary", () => {
 				</Routes>
 			</MemoryRouter>
 		);
-		expect(screen.getByText("This page could not be displayed")).toBeInTheDocument();
+		expect(screen.getByText("This page couldn't be displayed")).toBeInTheDocument();
 		expect(screen.getByRole("navigation")).toBeInTheDocument();
 		spy.mockRestore();
 	});

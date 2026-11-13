@@ -30,6 +30,7 @@ describe("first admin setup", () => {
 		const bad = await post(app, { ...body, setupToken: "nope-nope" });
 		expect(bad.status).toBe(403);
 		expect(bad.body.error.code).toBe("BAD_SETUP_TOKEN");
+		expect(bad.body.error.field).toBe("setupToken");
 
 		const ok = await post(app, body);
 		expect(ok.status).toBe(201);
@@ -57,6 +58,6 @@ describe("first admin setup", () => {
 		const res = await post(testApp(), { ...body, password: "short" });
 		expect(res.status).toBe(400);
 		expect(res.body.error.code).toBe("VALIDATION_ERROR");
-		expect(res.body.error.message).toContain("body.password");
+		expect(res.body.error.message).toBe("Password: must be at least 12 characters.");
 	});
 });

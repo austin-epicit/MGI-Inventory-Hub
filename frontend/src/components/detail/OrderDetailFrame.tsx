@@ -52,7 +52,7 @@ export default function OrderDetailFrame({
 					action={
 						missing
 							? undefined
-							: { label: "Retry", onClick: onRetry }
+							: { label: "Try again", onClick: onRetry }
 					}
 				/>
 			</div>

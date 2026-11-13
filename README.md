@@ -94,6 +94,16 @@ npm run dev                 # http://localhost:3100/api/health
 
 Postgres is expected on `localhost:5440` (`docker compose up db` provides it, with `mgi` and `mgi_test`). `docker-compose.yml` is the local stack (demo data, dev server); `docker-compose.prod.yml` is production.
 
+### Try it against the fake Cin7
+
+To exercise real syncing locally without a Cin7 account, layer the fake server over the local stack:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.fake.yml --profile fake up -d
+```
+
+The overlay switches the api to `CIN7_SOURCE=http` and points it at the fake server on port 4010 (and sets `NODE_ENV=development`). Then open **Settings → Cin7 connection** and enter Account ID `fake-account-id` and Application Key `fake-application-key`, then **Save and verify**. Drop `docker-compose.fake.yml` from the command to go back to demo data.
+
 ### Tests
 
 ```bash

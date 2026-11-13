@@ -19,7 +19,7 @@ import {
 import { ChartChip, ChartTooltipShell, QueryErrorState } from "../../components/charts/chartShared";
 import Card from "../../components/ui/Card";
 import EmptyState from "../../components/ui/EmptyState";
-import { formatDate, formatMoney, formatMoneyCompact, formatQty } from "../../lib/format";
+import { formatDate, formatMoney, formatMoneyCompact, formatQty, plural } from "../../lib/format";
 import { useInsightsStock } from "./hooks";
 
 const LINE_COLOR = "var(--color-chart-primary)";
@@ -37,7 +37,7 @@ function ValueTooltip({ active, payload }: { active?: boolean; payload?: { paylo
 				{formatMoney(p.value)}
 			</p>
 			<p className="text-xs tabular-nums text-text-secondary">
-				{formatQty(p.units)} units
+				{formatQty(p.units)} {plural(p.units, "unit")}
 			</p>
 		</ChartTooltipShell>
 	);

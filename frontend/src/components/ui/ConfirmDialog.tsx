@@ -73,7 +73,10 @@ export default function ConfirmDialog({
 					{body}
 				</div>
 				{error && (
-					<p className="text-sm text-error-text mb-3 break-words">
+					<p
+						role="alert"
+						className="text-sm text-error-text mb-3 break-words"
+					>
 						{error}
 					</p>
 				)}
@@ -89,10 +92,10 @@ export default function ConfirmDialog({
 						type="button"
 						onClick={handleConfirmClick}
 						disabled={pending || confirmDisabled}
-						className={`px-3 py-1.5 rounded-md text-sm font-medium text-on-primary transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+						className={`px-3 py-1.5 rounded-md text-sm font-medium text-on-primary transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
 							tone === "destructive"
 								? "bg-error hover:enabled:bg-error-strong"
-								: "bg-primary hover:enabled:bg-primary-hover"
+								: "bg-primary-fill hover:enabled:bg-primary-fill-hover"
 						}`}
 					>
 						{pending ? "Working…" : confirmLabel}

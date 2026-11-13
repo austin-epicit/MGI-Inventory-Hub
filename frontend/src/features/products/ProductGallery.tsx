@@ -187,7 +187,7 @@ export default function ProductGallery({ images, name }: { images: ProductImage[
 					>
 						<ChevronRight size={16} />
 					</button>
-					<div className="absolute bottom-1.5 left-1/2 z-10 flex -translate-x-1/2 gap-1">
+					<div className="absolute bottom-0 left-1/2 z-10 flex -translate-x-1/2">
 						{images.map((img, n) => (
 							<button
 								key={img.id}
@@ -195,12 +195,16 @@ export default function ProductGallery({ images, name }: { images: ProductImage[
 								aria-label={`Show picture ${n + 1}`}
 								aria-current={n === i}
 								onClick={() => setIndex(n)}
-								className={`h-1.5 w-1.5 cursor-pointer rounded-full transition-colors duration-150 ease-out ${
-									n === i
-										? "bg-text-tertiary"
-										: "bg-border-strong"
-								}`}
-							/>
+								className="flex h-5 w-5 cursor-pointer items-center justify-center"
+							>
+								<span
+									className={`h-1.5 w-1.5 rounded-full transition-colors duration-150 ease-out ${
+										n === i
+											? "bg-text-tertiary"
+											: "bg-border-strong"
+									}`}
+								/>
+							</button>
 						))}
 					</div>
 				</>

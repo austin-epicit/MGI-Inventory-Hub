@@ -9,7 +9,13 @@ import ReportState from "../../components/ui/ReportState";
 import SegmentedToggle from "../../components/ui/SegmentedToggle";
 import StatCard from "../../components/ui/StatCard";
 import Thumb from "../../components/ui/Thumb";
-import { formatDate, formatDateTime, formatMoney, formatQty } from "../../lib/format";
+import {
+	formatDate,
+	formatDateTime,
+	formatMoney,
+	formatPercent,
+	formatQty,
+} from "../../lib/format";
 import type { PriceRange } from "../../types/priceHistory";
 import type { CostMover, RecentOrder } from "./api";
 import TrendCard from "../insights/TrendCard";
@@ -34,8 +40,7 @@ function ChangeCell({ pct }: { pct: number }) {
 			className={`inline-flex items-center gap-1 font-semibold tabular-nums ${tone}`}
 		>
 			{!flat && <Icon size={12} />}
-			{pct > 0 ? "+" : ""}
-			{pct.toFixed(1)}%
+			{formatPercent(pct, { signed: true })}
 		</span>
 	);
 }
@@ -51,13 +56,13 @@ function CostMovers({ movers }: { movers: CostMover[] }) {
 	return (
 		<table className="w-full text-left text-[13px]">
 			<thead>
-				<tr className="border-b border-border-subtle text-xs text-text-muted">
+				<tr className="border-b border-border-subtle text-xs font-medium text-text-tertiary">
 					<th className="px-4 py-2 font-medium">Product</th>
 					<th className="px-2 py-2 text-right font-medium">
-						Prior avg
+						Average cost (before)
 					</th>
 					<th className="px-2 py-2 text-right font-medium">
-						Last cost
+						Purchase cost
 					</th>
 					<th className="px-4 py-2 text-right font-medium">Change</th>
 				</tr>
@@ -68,9 +73,10 @@ function CostMovers({ movers }: { movers: CostMover[] }) {
 						key={m.productId}
 						className="border-b border-border-subtle last:border-b-0 hover:bg-surface"
 					>
-						<td className="px-4 py-2">
+						<td className="w-full max-w-0 px-4 py-2">
 							<Link
 								to={`/products/${m.productId}`}
+								title={m.name}
 								className="flex items-center gap-3 text-text-link hover:underline"
 							>
 								<Thumb
@@ -129,7 +135,10 @@ function RecentOrders({
 							<span className="block font-medium text-text-link">
 								{o.orderNumber}
 							</span>
-							<span className="block truncate text-xs text-text-muted">
+							<span
+								className="block truncate text-xs text-text-muted"
+								title={o.party}
+							>
 								{o.party}
 								{o.orderDate
 									? ` · ${formatDate(o.orderDate)}`
@@ -161,7 +170,7 @@ export default function OverviewPage() {
 		setSearchParams(params, { replace: true });
 	};
 
-	const { data, isLoading, error } = useOverview(range);
+	const { data, isLoading, error, refetch } = useOverview(range);
 	const phrase = RANGE_PHRASE[range];
 
 	return (
@@ -188,7 +197,8 @@ export default function OverviewPage() {
 			<ReportState
 				loading={isLoading}
 				error={error}
-				errorMessage="Could not load the overview"
+				errorMessage="Couldn't load the overview"
+				onRetry={() => void refetch()}
 				skeleton={
 					<div className="h-64 animate-pulse rounded-lg bg-surface" />
 				}
@@ -228,7 +238,11 @@ export default function OverviewPage() {
 									data.kpis.grossMarginPct ==
 									null
 										? "—"
-										: `${data.kpis.grossMarginPct.toFixed(1)}%`
+										: formatPercent(
+												data
+													.kpis
+													.grossMarginPct
+											)
 								}
 								hint={phrase}
 							/>
@@ -250,8 +264,9 @@ export default function OverviewPage() {
 								flush
 								headerAction={
 									<span className="text-xs text-text-muted">
-										Last cost vs earlier
-										purchases, 180 days
+										Purchase cost vs
+										earlier purchases,
+										180 days
 									</span>
 								}
 							>

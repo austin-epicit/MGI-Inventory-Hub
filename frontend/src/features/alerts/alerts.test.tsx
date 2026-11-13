@@ -161,7 +161,7 @@ describe("AlertsPage", () => {
 		render(<AlertsPage />);
 		const table = await screen.findByRole("table", { name: "Slow movers" });
 		expect(within(table).getByText("$2,500.00")).toBeInTheDocument();
-		expect(within(table).getByText(/Never sold/)).toBeInTheDocument();
+		expect(within(table).getByText(/never sold/)).toBeInTheDocument();
 	});
 
 	it("empty states and rule footers use the current thresholds", async () => {
@@ -198,6 +198,29 @@ describe("AlertsPage", () => {
 			screen.getByText(
 				"In stock, no sale in 60 days, stock value $500.00 or more."
 			)
+		).toBeInTheDocument();
+	});
+
+	it("says '1 day', not '1 days', when a threshold is 1", async () => {
+		vi.spyOn(globalThis, "fetch").mockResolvedValue(
+			envelope(
+				200,
+				payload({
+					thresholds: {
+						costChangePct: 25,
+						costChangeDays: 1,
+						slowMoverDays: 1,
+						slowMoverMinValue: 500,
+					},
+				})
+			)
+		);
+		render(<AlertsPage />);
+		expect(await screen.findByText(/bought in the last 1 day\./)).toBeInTheDocument();
+		expect(screen.getByText(/no sale in 1 day,/)).toBeInTheDocument();
+		expect(screen.getByText(/has gone 1 day without a sale/)).toBeInTheDocument();
+		expect(
+			screen.getByText(/moved 25% or more in the last 1 day\./)
 		).toBeInTheDocument();
 	});
 
@@ -403,13 +426,14 @@ describe("AlertsSettingsCard", () => {
 		);
 		expect(screen.queryByText(/costChangePct/)).not.toBeInTheDocument();
 	});
-
-	it("viewer sees the values with no inputs", async () => {
-		setRole("viewer");
+	it("labels the money threshold with the base currency, not a symbol", async () => {
+		setRole("admin");
 		vi.spyOn(globalThis, "fetch").mockResolvedValue(envelope(200, thresholds));
 		render(<AlertsSettingsCard />);
-		expect(await screen.findByText("1000 $")).toBeInTheDocument();
-		expect(screen.queryByRole("spinbutton")).not.toBeInTheDocument();
-		expect(screen.queryByRole("button", { name: "Save" })).not.toBeInTheDocument();
+		expect(
+			await screen.findByLabelText(
+				"Slow mover: stock value at least (base currency)"
+			)
+		).toHaveValue("1000");
 	});
 });

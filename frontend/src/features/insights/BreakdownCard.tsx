@@ -7,7 +7,7 @@ import EmptyState from "../../components/ui/EmptyState";
 import ExportButton from "../../components/ui/ExportButton";
 import SegmentedToggle from "../../components/ui/SegmentedToggle";
 import { downloadCsv, localYmd, type CsvColumn } from "../../lib/csv";
-import { formatMoney, formatQty } from "../../lib/format";
+import { formatCount, formatMoney, formatPercent, formatQty } from "../../lib/format";
 import type { PriceRange } from "../../types/priceHistory";
 import type { BreakdownBy, InsightsBreakdownRow } from "./api";
 import { useInsightsBreakdown } from "./hooks";
@@ -17,7 +17,7 @@ const BY_OPTIONS: { id: BreakdownBy; label: string }[] = [
 	{ id: "brand", label: "Brand" },
 	{ id: "grade", label: "Grade" },
 	{ id: "customer", label: "Customer" },
-	{ id: "tier", label: "Price tier" },
+	{ id: "tier", label: "Tier" },
 	{ id: "supplier", label: "Supplier" },
 ];
 
@@ -53,11 +53,11 @@ const csvColumns = (label: string, sales: boolean): CsvColumn<InsightsBreakdownR
 				{ label, value: (r) => r.label },
 				{ label: "Spend", value: (r) => r.amount },
 				{ label: "Units bought", value: (r) => r.units },
-				{ label: "POs", value: (r) => r.orders },
+				{ label: "Orders", value: (r) => r.orders },
 				{ label: "Products", value: (r) => r.products },
 			];
 
-const TH_BASE = "px-2 py-1.5 font-medium text-text-muted whitespace-nowrap";
+const TH_BASE = "px-2 py-1.5 text-xs font-medium text-text-tertiary whitespace-nowrap";
 const TH = `${TH_BASE} text-right`;
 const TH_LEFT = `${TH_BASE} text-left`;
 const TD = "px-2 py-1.5 text-right tabular-nums whitespace-nowrap";
@@ -83,7 +83,7 @@ function Row({
 				{href ? (
 					<Link
 						to={href}
-						className="block truncate text-primary-text hover:underline"
+						className="block truncate text-text-link hover:underline"
 						title={row.label}
 					>
 						{row.label}
@@ -123,16 +123,16 @@ function Row({
 					<td className={TD}>
 						{row.marginPct === null
 							? "—"
-							: `${row.marginPct.toFixed(1)}%`}
+							: formatPercent(row.marginPct)}
 					</td>
 					<td className={TD}>{formatQty(row.units)}</td>
-					<td className={TD}>{row.orders}</td>
+					<td className={TD}>{formatCount(row.orders)}</td>
 				</>
 			) : (
 				<>
 					<td className={TD}>{formatQty(row.units)}</td>
-					<td className={TD}>{row.orders}</td>
-					<td className={TD}>{row.products}</td>
+					<td className={TD}>{formatCount(row.orders)}</td>
+					<td className={TD}>{formatCount(row.products)}</td>
 				</>
 			)}
 		</tr>
@@ -179,7 +179,11 @@ export default function BreakdownCard({
 			<EmptyState
 				icon={<Layers size={26} />}
 				title="Nothing to break down in this range"
-				description="Pick a longer range to see older orders."
+				description={
+					range === "all"
+						? "Counted orders show up here once Cin7 has some."
+						: "Pick a longer range to see older orders."
+				}
 			/>
 		);
 	else {
@@ -195,7 +199,7 @@ export default function BreakdownCard({
 					<thead>
 						<tr>
 							<th className={TH_LEFT}>{label}</th>
-							<th className={TH_LEFT}>
+							<th className={TH}>
 								{sales ? "Sales" : "Spend"}
 							</th>
 							{sales ? (
@@ -204,7 +208,7 @@ export default function BreakdownCard({
 										Gross profit
 									</th>
 									<th className={TH}>
-										Margin %
+										Margin
 									</th>
 									<th className={TH}>
 										Units
@@ -218,7 +222,9 @@ export default function BreakdownCard({
 									<th className={TH}>
 										Units bought
 									</th>
-									<th className={TH}>POs</th>
+									<th className={TH}>
+										Orders
+									</th>
 									<th className={TH}>
 										Products
 									</th>

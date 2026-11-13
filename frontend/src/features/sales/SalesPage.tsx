@@ -82,7 +82,7 @@ export default function SalesPage() {
 		sort: sort.sortKey as SaleSortKey | undefined,
 		dir: sort.sortKey ? sort.sortDir : undefined,
 	};
-	const { data, isLoading, isFetching, error } = useSales({
+	const { data, isLoading, isFetching, error, refetch } = useSales({
 		...query,
 		page: page + 1,
 		limit: pageSize,
@@ -173,7 +173,7 @@ export default function SalesPage() {
 				className="mb-4"
 				left={
 					<SearchBar
-						placeholder="Search by order number or customer..."
+						placeholder="Search by order number or customer…"
 						value={searchInput}
 						onChange={filtered(setSearchInput)}
 					/>
@@ -197,6 +197,8 @@ export default function SalesPage() {
 									label: c.name,
 								})
 							)}
+							loadError={facets.isError}
+							onRetryOptions={() => void facets.refetch()}
 						/>
 						<DropdownFilter
 							placeholder="Tier"
@@ -210,6 +212,8 @@ export default function SalesPage() {
 									label: v,
 								})
 							)}
+							loadError={facets.isError}
+							onRetryOptions={() => void facets.refetch()}
 						/>
 						<DropdownFilter
 							placeholder="Status"
@@ -223,6 +227,8 @@ export default function SalesPage() {
 									label: orderLabel(v),
 								})
 							)}
+							loadError={facets.isError}
+							onRetryOptions={() => void facets.refetch()}
 						/>
 					</>
 				}
@@ -251,7 +257,14 @@ export default function SalesPage() {
 						: null,
 					customerId
 						? {
-								label: `Customer: ${customerName ?? (facets.data ? "Unknown" : "…")}`,
+								label: `Customer: ${
+									customerName ??
+									(facets.isError
+										? "(couldn't load name)"
+										: facets.data
+											? "Unknown"
+											: "…")
+								}`,
 								color: "blue" as const,
 								onRemove: () =>
 									filtered(setCustomerId)(
@@ -300,6 +313,9 @@ export default function SalesPage() {
 							data={displayRows}
 							loadListener={isLoading}
 							errListener={error}
+							errorWhat="sales orders"
+							onRetry={() => void refetch()}
+							onClearFilters={clearAll}
 							formatNums={false}
 							headerLabels={HEADER_LABELS}
 							columnAlign={COLUMN_ALIGN}

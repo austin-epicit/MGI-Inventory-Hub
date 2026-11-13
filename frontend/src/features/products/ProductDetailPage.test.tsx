@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi, type MockInstance } from "vitest";
+import userEvent from "@testing-library/user-event";
 import { Route, Routes } from "react-router-dom";
 import { render, screen, within } from "../../test/testUtils";
 import { setFormatContext } from "../../lib/format";
@@ -172,6 +173,51 @@ describe("ProductDetailPage", () => {
 		renderPage();
 		expect(await screen.findAllByRole("link", { name: "PO-0042" })).toHaveLength(2);
 		expect(err.mock.calls.some((c) => String(c[0]).includes("same key"))).toBe(false);
+	});
+
+	it("treats a malformed product link (400) as not found, with no Try again", async () => {
+		fetchSpy.mockImplementation(
+			async () =>
+				new Response(
+					JSON.stringify({
+						success: false,
+						data: null,
+						error: {
+							code: "VALIDATION_ERROR",
+							message: "Not a valid id.",
+						},
+					}),
+					{
+						status: 400,
+						headers: { "Content-Type": "application/json" },
+					}
+				)
+		);
+		renderPage();
+		expect(await screen.findByText("Product not found")).toBeInTheDocument();
+		expect(screen.queryByRole("button", { name: "Try again" })).toBeNull();
+	});
+
+	it("offers Try again when a product's purchases fail to load", async () => {
+		let down = true;
+		fetchSpy.mockImplementation(async (input) => {
+			const url = String(input);
+			if (url.startsWith(`/api/products/${ID}/purchases`))
+				return down
+					? new Response("<html>bad gateway</html>", { status: 502 })
+					: reply(purchases, 1);
+			if (url.startsWith(`/api/products/${ID}/sales`)) return reply(sales, 1);
+			if (url.startsWith(`/api/products/${ID}/price-history`))
+				return reply(history);
+			return reply(detail);
+		});
+		renderPage();
+		expect(
+			await screen.findByText("Couldn't load purchase orders")
+		).toBeInTheDocument();
+		down = false;
+		await userEvent.setup().click(screen.getByRole("button", { name: "Try again" }));
+		expect(await screen.findByRole("link", { name: "PO-0042" })).toBeInTheDocument();
 	});
 
 	it("asks for the price history of the chosen range", async () => {

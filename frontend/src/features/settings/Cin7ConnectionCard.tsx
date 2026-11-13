@@ -3,13 +3,10 @@ import Card from "../../components/ui/Card";
 import ConfirmDialog from "../../components/ui/ConfirmDialog";
 import { HEADER_BTN_PRIMARY, HEADER_BTN_SECONDARY } from "../../components/ui/headerActions";
 import { useToast } from "../../hooks/useToast";
-import { ApiError } from "../../lib/api";
+import { ApiError, errorMessage } from "../../lib/api";
 import { formatDateTime } from "../../lib/format";
 import { inputClass } from "./ui";
 import { useCin7Connection, useDisconnectCin7, useSaveCin7 } from "./hooks";
-
-const errorText = (err: unknown) =>
-	err instanceof ApiError ? err.message : "Could not reach the server";
 
 export default function Cin7ConnectionCard() {
 	const { data, isLoading, isError, refetch } = useCin7Connection();
@@ -42,7 +39,7 @@ export default function Cin7ConnectionCard() {
 				return;
 			}
 			setReplaceOpen(false);
-			setError(errorText(err));
+			setError(errorMessage(err));
 		}
 	};
 
@@ -57,7 +54,7 @@ export default function Cin7ConnectionCard() {
 				<p className="text-sm text-text-muted">Loading…</p>
 			) : isError || !data ? (
 				<div className="flex items-center gap-3 text-sm text-error-text">
-					<span role="alert">Could not load the connection.</span>
+					<span role="alert">Couldn't load the connection.</span>
 					<button
 						type="button"
 						className={HEADER_BTN_SECONDARY}
@@ -89,14 +86,14 @@ export default function Cin7ConnectionCard() {
 								The saved credentials can&apos;t be
 								read (the encryption key may have
 								changed). Enter them again below, or
-								remove them.
+								disconnect.
 							</span>
 							<button
 								type="button"
 								className={HEADER_BTN_SECONDARY}
 								onClick={() => setConfirmOpen(true)}
 							>
-								Remove
+								Disconnect
 							</button>
 						</div>
 					) : data.connected ? (
@@ -133,7 +130,7 @@ export default function Cin7ConnectionCard() {
 					) : (
 						<p className="text-sm text-text-muted">
 							Not connected. Enter the Account ID and
-							Application Key from Cin7 (API access
+							Application key from Cin7 (API access
 							settings). They are checked with Cin7 before
 							being saved.
 						</p>
@@ -151,12 +148,13 @@ export default function Cin7ConnectionCard() {
 								onChange={(e) =>
 									setAccountId(e.target.value)
 								}
+								maxLength={200}
 								autoComplete="off"
 								spellCheck={false}
 							/>
 						</label>
 						<label className="text-xs font-medium text-text-secondary">
-							Application Key
+							Application key
 							<input
 								type="password"
 								className={`${inputClass} mt-1`}
@@ -166,6 +164,7 @@ export default function Cin7ConnectionCard() {
 										e.target.value
 									)
 								}
+								maxLength={200}
 								autoComplete="new-password"
 								spellCheck={false}
 							/>
@@ -217,11 +216,13 @@ export default function Cin7ConnectionCard() {
 				body="Syncing stops and the saved credentials are deleted. Data already copied stays in place."
 				confirmLabel="Disconnect"
 				pending={disconnect.isPending}
-				error={disconnect.isError ? errorText(disconnect.error) : null}
-				onConfirm={async () => {
-					await disconnect.mutateAsync();
-					setConfirmOpen(false);
-				}}
+				error={disconnect.isError ? errorMessage(disconnect.error) : null}
+				onConfirm={() =>
+					disconnect
+						.mutateAsync()
+						.then(() => setConfirmOpen(false))
+						.catch(() => undefined)
+				}
 				onCancel={() => {
 					disconnect.reset();
 					setConfirmOpen(false);

@@ -8,7 +8,7 @@ export const HEADER_BTN_BASE =
 
 const ENABLED = "cursor-pointer disabled:cursor-not-allowed disabled:opacity-40";
 
-export const HEADER_BTN_PRIMARY = `${HEADER_BTN_BASE} ${ENABLED} bg-primary-hover text-on-primary hover:enabled:bg-primary-active`;
+export const HEADER_BTN_PRIMARY = `${HEADER_BTN_BASE} ${ENABLED} bg-primary-fill text-on-primary hover:enabled:bg-primary-fill-hover`;
 
 export const HEADER_BTN_SECONDARY = `${HEADER_BTN_BASE} ${ENABLED} border border-border text-text-secondary hover:border-border-strong hover:bg-surface-raised hover:text-text-primary`;
 

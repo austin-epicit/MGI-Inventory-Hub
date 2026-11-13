@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { PackageSearch } from "lucide-react";
 import Thumb from "../../components/ui/Thumb";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import AdaptableTable from "../../components/ui/AdaptableTable";
 import EmptyState from "../../components/ui/EmptyState";
 import ExportButton from "../../components/ui/ExportButton";
@@ -14,7 +14,7 @@ import { DropdownFilter } from "../../components/ui/StatusFilter";
 import { useDebouncedValue } from "../../hooks/useDebouncedValue";
 import { useReportSort } from "../../hooks/useReportSort";
 import { exportHref } from "../../lib/csv";
-import { formatDate, formatMoney } from "../../lib/format";
+import { formatDate, formatMoney, formatQty } from "../../lib/format";
 import { PRODUCT_STATUSES, type ConditionGrade, type ProductRow, type ProductSortKey } from "./api";
 import { CONDITION_GRADES, GRADE_LABELS, NOT_GRADED } from "./condition";
 import GradeBadge from "./GradeBadge";
@@ -112,7 +112,7 @@ export default function ProductsPage() {
 		sort: sort.sortKey as ProductSortKey | undefined,
 		dir: sort.sortKey ? sort.sortDir : undefined,
 	};
-	const { data, isLoading, isFetching, error } = useProducts({
+	const { data, isLoading, isFetching, error, refetch } = useProducts({
 		...query,
 		page: page + 1,
 		limit: pageSize,
@@ -142,14 +142,25 @@ export default function ProductsPage() {
 		[rows]
 	);
 
-	const titled =
-		(key: "sku" | "name" | "category" | "brand") => (r: Record<string, unknown>) => {
-			const v = rowOf(r)[key] ?? "—";
-			return <span title={v}>{v}</span>;
-		};
+	const titled = (key: "sku" | "category" | "brand") => (r: Record<string, unknown>) => {
+		const v = rowOf(r)[key] ?? "—";
+		return <span title={v}>{v}</span>;
+	};
 	const cellRenderers = {
 		sku: titled("sku"),
-		name: titled("name"),
+		name: (r: Record<string, unknown>) => {
+			const row = rowOf(r);
+			return (
+				<Link
+					to={`/products/${row.id}`}
+					title={row.name}
+					onClick={(e) => e.stopPropagation()} // the row click would navigate a second time
+					className="text-text-link hover:underline"
+				>
+					{row.name}
+				</Link>
+			);
+		},
 		category: titled("category"),
 		brand: titled("brand"),
 		grade: (r: Record<string, unknown>) =>
@@ -161,6 +172,7 @@ export default function ProductsPage() {
 		thumb: (r: Record<string, unknown>) => (
 			<Thumb url={rowOf(r).thumbUrl} name={rowOf(r).name} />
 		),
+		onHand: (r: Record<string, unknown>) => formatQty(rowOf(r).onHand),
 		averageCost: (r: Record<string, unknown>) => formatMoney(rowOf(r).averageCost),
 		listPrices: (r: Record<string, unknown>) => {
 			const prices = rowOf(r).listPrices;
@@ -212,7 +224,7 @@ export default function ProductsPage() {
 				className="mb-4"
 				left={
 					<SearchBar
-						placeholder="Search by SKU or name..."
+						placeholder="Search by SKU or name…"
 						value={searchInput}
 						onChange={filtered(setSearchInput)}
 					/>
@@ -226,6 +238,8 @@ export default function ProductsPage() {
 							values={category ? [category] : null}
 							onChange={filtered(setCategory)}
 							options={toOptions(facets.data?.categories)}
+							loadError={facets.isError}
+							onRetryOptions={() => void facets.refetch()}
 						/>
 						<DropdownFilter
 							placeholder="Brand"
@@ -234,6 +248,8 @@ export default function ProductsPage() {
 							values={brand ? [brand] : null}
 							onChange={filtered(setBrand)}
 							options={toOptions(facets.data?.brands)}
+							loadError={facets.isError}
+							onRetryOptions={() => void facets.refetch()}
 						/>
 						<DropdownFilter
 							placeholder="Grade"
@@ -327,6 +343,9 @@ export default function ProductsPage() {
 							data={displayRows}
 							loadListener={isLoading}
 							errListener={error}
+							errorWhat="products"
+							onRetry={() => void refetch()}
+							onClearFilters={clearAll}
 							formatNums={false}
 							headerLabels={HEADER_LABELS}
 							columnAlign={COLUMN_ALIGN}

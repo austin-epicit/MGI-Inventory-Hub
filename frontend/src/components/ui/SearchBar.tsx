@@ -2,6 +2,9 @@ import { useState, useEffect, useRef } from "react";
 import { Search } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
 
+// The API rejects a longer search with a 400.
+const SEARCH_MAX = 200;
+
 type UrlParamProps = {
 	placeholder: string;
 	paramKey: string;
@@ -75,9 +78,11 @@ function UrlParamSearchBar({
 			<input
 				type="text"
 				placeholder={placeholder}
+				aria-label={placeholder}
 				value={value}
 				onChange={(e) => handleChange(e.target.value)}
-				className="w-full pl-9 pr-3 py-2 rounded-md bg-base border border-border text-sm text-text-primary placeholder:text-faint focus:outline-none focus:ring-1 focus:ring-primary-border"
+				maxLength={SEARCH_MAX}
+				className="w-full pl-9 pr-3 h-9 rounded-md bg-base border border-border text-sm text-text-primary placeholder:text-text-faint focus:outline-none focus:ring-1 focus:ring-primary"
 			/>
 		</form>
 	);
@@ -93,9 +98,11 @@ function ControlledSearchBar({ placeholder, value, onChange, className }: Contro
 			<input
 				type="text"
 				placeholder={placeholder}
+				aria-label={placeholder}
 				value={value}
 				onChange={(e) => onChange(e.target.value)}
-				className="w-full pl-9 pr-3 py-2 rounded-md bg-base border border-border text-sm text-text-primary placeholder:text-faint focus:outline-none focus:ring-1 focus:ring-primary-border"
+				maxLength={SEARCH_MAX}
+				className="w-full pl-9 pr-3 h-9 rounded-md bg-base border border-border text-sm text-text-primary placeholder:text-text-faint focus:outline-none focus:ring-1 focus:ring-primary"
 			/>
 		</div>
 	);

@@ -4,6 +4,7 @@ import { DayPicker } from "react-day-picker";
 import { useSearchParams } from "react-router-dom";
 import { format } from "date-fns";
 import "react-day-picker/dist/style.css";
+import { formatDate } from "../../lib/format";
 import {
 	type DateRangeOption,
 	type DateRangeValue,
@@ -106,8 +107,8 @@ function DateRangeDropdown({
 	const containerRef = useRef<HTMLDivElement>(null);
 	const calendarRef = useRef<HTMLDivElement>(null);
 	const triggerRef = useRef<HTMLButtonElement>(null);
-	const startBoxRef = useRef<HTMLDivElement>(null);
-	const endBoxRef = useRef<HTMLDivElement>(null);
+	const startBoxRef = useRef<HTMLButtonElement>(null);
+	const endBoxRef = useRef<HTMLButtonElement>(null);
 
 	const [tempOption, setTempOption] = useState<DateRangeOption>("all");
 	const [tempStart, setTempStart] = useState<Date | undefined>(undefined);
@@ -248,7 +249,7 @@ function DateRangeDropdown({
 				aria-haspopup="listbox"
 				className={`flex items-center gap-1.5 h-9 px-3 rounded-md border text-sm transition-colors cursor-pointer whitespace-nowrap ${
 					isActive
-						? "bg-primary-bg border-primary text-primary-text"
+						? "bg-primary-bg border-primary text-primary-text pr-7"
 						: "bg-base border-border text-text-tertiary hover:text-text-primary"
 				}`}
 			>
@@ -258,19 +259,21 @@ function DateRangeDropdown({
 						? `${label}: ${formatTriggerLabel(value)}`
 						: `${label}`}
 				</span>
-				{isActive ? (
-					<X
-						size={14}
-						className="shrink-0"
-						onClick={(e) => {
-							e.stopPropagation();
-							onChange({ option: "all" });
-						}}
-					/>
-				) : (
-					<ChevronDown size={14} className="shrink-0" />
-				)}
+				{!isActive && <ChevronDown size={14} className="shrink-0" />}
 			</button>
+			{isActive && (
+				<button
+					type="button"
+					onClick={(e) => {
+						e.stopPropagation();
+						onChange({ option: "all" });
+					}}
+					aria-label="Clear date range"
+					className="absolute right-2 top-1/2 -translate-y-1/2 cursor-pointer text-primary-text/70 hover:text-primary-text"
+				>
+					<X size={14} className="shrink-0" />
+				</button>
+			)}
 
 			{open && (
 				<div
@@ -315,79 +318,87 @@ function DateRangeDropdown({
 						<div className="border-t border-border px-3 py-3">
 							<div className="grid grid-cols-2 gap-2 mb-3">
 								{/* Start box */}
-								<div
+								<button
+									type="button"
+									aria-label="Start date"
 									ref={startBoxRef}
 									onClick={() =>
 										handleFieldClick(
 											"start"
 										)
 									}
-									className={`flex items-center justify-between px-2.5 py-2 rounded-md border cursor-pointer transition-colors ${
+									className={`flex items-center justify-between px-2.5 py-2 rounded-md border cursor-pointer text-left transition-colors ${
 										editingField ===
 										"start"
 											? "border-primary bg-base"
 											: "border-border bg-base hover:border-border-strong"
 									}`}
 								>
-									<div className="min-w-0 flex-1">
-										<p className="text-xs text-text-tertiary mb-0.5">
-											Start time
-										</p>
-										<p className="text-xs text-text-primary">
+									<span className="min-w-0 flex-1">
+										<span className="mb-0.5 block text-xs text-text-tertiary">
+											Start date
+										</span>
+										<span className="block text-xs text-text-primary">
 											{tempStart
-												? format(
-														tempStart,
-														"MMM d, yyyy"
+												? formatDate(
+														format(
+															tempStart,
+															"yyyy-MM-dd"
+														)
 													)
 												: "—"}
-										</p>
-									</div>
+										</span>
+									</span>
 									<Calendar
 										size={13}
 										className="shrink-0 ml-1.5 text-text-muted"
 									/>
-								</div>
+								</button>
 
 								{/* End box */}
-								<div
+								<button
+									type="button"
+									aria-label="End date"
 									ref={endBoxRef}
 									onClick={() =>
 										handleFieldClick(
 											"end"
 										)
 									}
-									className={`flex items-center justify-between px-2.5 py-2 rounded-md border cursor-pointer transition-colors ${
+									className={`flex items-center justify-between px-2.5 py-2 rounded-md border cursor-pointer text-left transition-colors ${
 										editingField ===
 										"end"
 											? "border-primary bg-base"
 											: "border-border bg-base hover:border-border-strong"
 									}`}
 								>
-									<div className="min-w-0 flex-1">
-										<p className="text-xs text-text-tertiary mb-0.5">
-											End time
-										</p>
-										<p className="text-xs text-text-primary">
+									<span className="min-w-0 flex-1">
+										<span className="mb-0.5 block text-xs text-text-tertiary">
+											End date
+										</span>
+										<span className="block text-xs text-text-primary">
 											{tempEnd
-												? format(
-														tempEnd,
-														"MMM d, yyyy"
+												? formatDate(
+														format(
+															tempEnd,
+															"yyyy-MM-dd"
+														)
 													)
 												: "—"}
-										</p>
-									</div>
+										</span>
+									</span>
 									<Calendar
 										size={13}
 										className="shrink-0 ml-1.5 text-text-muted"
 									/>
-								</div>
+								</button>
 							</div>
 
 							<button
 								type="button"
 								onClick={handleApply}
 								disabled={!tempStart || !tempEnd}
-								className="w-full h-8 bg-primary-hover hover:bg-primary-active disabled:opacity-50 disabled:cursor-not-allowed rounded text-sm font-medium transition-colors text-on-primary cursor-pointer"
+								className="w-full h-8 bg-primary-fill hover:bg-primary-fill-hover disabled:opacity-40 disabled:cursor-not-allowed rounded-md text-sm font-medium transition-colors text-on-primary cursor-pointer"
 							>
 								Apply
 							</button>

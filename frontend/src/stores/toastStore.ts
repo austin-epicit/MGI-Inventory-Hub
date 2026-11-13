@@ -22,11 +22,13 @@ export interface ToastEntry {
 export interface PushOptions {
 	icon?: ReactNode;
 	action?: ToastAction;
-	/** Auto-dismiss delay in ms. Defaults to AUTO_DISMISS_MS. */
+	/** Auto-dismiss delay in ms. Defaults to 4000 (8000 for errors). */
 	durationMs?: number;
 }
 
 const AUTO_DISMISS_MS = 4000;
+// Errors need reading time; a 4s toast vanishes before a sentence is parsed.
+const ERROR_DISMISS_MS = 8000;
 // Matches ToastViewport's duration-200 exit transition
 const EXIT_MS = 200;
 // Gap between toasts pushed in the same burst
@@ -73,7 +75,10 @@ export const useToastStore = create<ToastState>((set, get) => ({
 				id,
 				window.setTimeout(
 					() => get().dismiss(id),
-					options?.durationMs ?? AUTO_DISMISS_MS
+					options?.durationMs ??
+						(kind === "error"
+							? ERROR_DISMISS_MS
+							: AUTO_DISMISS_MS)
 				)
 			);
 		};

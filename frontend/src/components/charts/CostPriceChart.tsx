@@ -18,7 +18,13 @@ import Card from "../ui/Card";
 import EmptyState from "../ui/EmptyState";
 import SegmentedToggle from "../ui/SegmentedToggle";
 import LoadSvg from "../../assets/icons/loading.svg?react";
-import { formatDate, formatMoney, formatMoneyCompact } from "../../lib/format";
+import {
+	formatDate,
+	formatMoney,
+	formatMoneyCompact,
+	formatPercent,
+	formatQty,
+} from "../../lib/format";
 import type { PriceHistory, PriceRange } from "../../types/priceHistory";
 import { CHART_GRID, CHART_TICK, resolveTimeDomain, timeXAxis } from "./chartAxis";
 import { stackLabels, valueToY, type LabelSlot } from "./chartLabels";
@@ -259,7 +265,7 @@ function TrendTooltip({
 									`${formatMoney(b.min)}–${formatMoney(b.max)}`,
 								]
 							: []),
-						`${b.units} sold`,
+						`${formatQty(b.units)} sold`,
 					].join(" · "),
 					style: s,
 				});
@@ -293,7 +299,8 @@ function TrendTooltip({
 				>
 					<SwatchIcon swatch="dot" color={COST_COLOR} />
 					<span className="text-text-secondary">
-						{p.orderNumber} · {p.supplier} · {p.qty} @
+						{p.orderNumber} · {p.supplier} · {formatQty(p.qty)}{" "}
+						@
 					</span>
 					<span className="font-semibold tabular-nums text-text-primary">
 						{formatMoney(p.unitCost)}
@@ -340,7 +347,7 @@ function HeadlineStat({
 						<DeltaIcon size={11} />
 						{flat
 							? "no change"
-							: `${deltaPct > 0 ? "+" : ""}${deltaPct.toFixed(1)}%`}
+							: formatPercent(deltaPct, { signed: true })}
 					</span>
 				)}
 			</div>
@@ -365,13 +372,16 @@ function HeadlineStrip({ stats }: { stats: PriceHistory["stats"] }) {
 				}
 			/>
 			<HeadlineStat label="Average cost" value={money(stats.averageCost)} />
-			<HeadlineStat label="Avg sold price" value={money(stats.avgSoldPrice)} />
+			<HeadlineStat
+				label="Average sold price"
+				value={money(stats.avgSoldPrice)}
+			/>
 			<HeadlineStat
 				label="Margin"
 				value={
 					stats.marginPct == null
 						? "—"
-						: `${stats.marginPct.toFixed(1)}%`
+						: formatPercent(stats.marginPct)
 				}
 			/>
 		</div>

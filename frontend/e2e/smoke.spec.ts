@@ -20,7 +20,7 @@ test("login → Overview → Products → product chart → its latest PO", asyn
 
 	await page.getByRole("link", { name: "Products", exact: true }).click();
 	await expect(page.getByRole("heading", { name: "Products" })).toBeVisible();
-	await page.getByPlaceholder("Search by SKU or name...").fill(sku);
+	await page.getByPlaceholder("Search by SKU or name…").fill(sku);
 	await page
 		.getByRole("row", { name: new RegExp(sku) })
 		.first()

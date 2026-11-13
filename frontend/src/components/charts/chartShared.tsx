@@ -8,7 +8,7 @@ import EmptyState from "../ui/EmptyState";
  * A failed read, rendered as a failed read: every detail card must route a
  * query error into this state rather than its empty state, because "No
  * history yet" over a 500 is a false claim about data that is still there.
- * `onRetry` is the query's refetch.
+ * `onRetry` is the query's refetch; omit it where retrying can't help.
  */
 export function QueryErrorState({
 	what,
@@ -16,14 +16,14 @@ export function QueryErrorState({
 }: {
 	/** What couldn't be loaded, lowercase noun phrase: "stock history". */
 	what: string;
-	onRetry: () => void;
+	onRetry?: () => void;
 }) {
 	return (
 		<EmptyState
 			icon={<AlertTriangle size={26} />}
 			title={`Couldn't load ${what}`}
 			description="Something went wrong fetching this. The data is still there — try again."
-			action={{ label: "Retry", onClick: onRetry }}
+			action={onRetry ? { label: "Try again", onClick: onRetry } : undefined}
 		/>
 	);
 }

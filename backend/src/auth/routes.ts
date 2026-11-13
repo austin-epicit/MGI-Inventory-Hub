@@ -54,7 +54,13 @@ export const createAuthRoutes = (deps: Deps, requireAuth: RequestHandler): Route
 				httpError(409, "ALREADY_SET_UP", "The first admin already exists");
 			if ((await db.user.count()) > 0) throw alreadySetUp();
 			if (!sameSecret(setupToken, auth.setupToken)) {
-				throw httpError(403, "BAD_SETUP_TOKEN", "Setup token is incorrect");
+				const bad = httpError(
+					403,
+					"BAD_SETUP_TOKEN",
+					"Setup token is incorrect"
+				);
+				bad.field = "setupToken";
+				throw bad;
 			}
 			const password_hash = await hashPassword(password);
 			const user = await db.$transaction(async (tx) => {

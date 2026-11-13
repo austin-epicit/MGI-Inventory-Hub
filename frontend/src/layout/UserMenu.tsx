@@ -19,11 +19,14 @@ export default function UserMenu() {
 	const { theme, setTheme } = useThemeStore();
 	const [open, setOpen] = useState(false);
 	const [themeOpen, setThemeOpen] = useState(false);
+	const [signingOut, setSigningOut] = useState(false);
 	const wrapperRef = useRef<HTMLDivElement>(null);
+	const triggerRef = useRef<HTMLButtonElement>(null);
 	const navigate = useNavigate();
 	const toast = useToast();
 
 	const logout = async () => {
+		setSigningOut(true);
 		try {
 			await api("/api/auth/logout", { method: "POST" });
 		} catch (err) {
@@ -33,6 +36,7 @@ export default function UserMenu() {
 				toast.error(
 					"Couldn't sign out. Check your connection and try again."
 				);
+				setSigningOut(false);
 				return;
 			}
 		}
@@ -46,8 +50,19 @@ export default function UserMenu() {
 			if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node))
 				setOpen(false);
 		};
+		const onKey = (e: KeyboardEvent) => {
+			if (e.key !== "Escape") return;
+			setOpen((wasOpen) => {
+				if (wasOpen) triggerRef.current?.focus();
+				return false;
+			});
+		};
 		document.addEventListener("mousedown", onDown);
-		return () => document.removeEventListener("mousedown", onDown);
+		document.addEventListener("keydown", onKey);
+		return () => {
+			document.removeEventListener("mousedown", onDown);
+			document.removeEventListener("keydown", onKey);
+		};
 	}, []);
 
 	const initial = user?.name.charAt(0).toUpperCase();
@@ -55,8 +70,10 @@ export default function UserMenu() {
 	return (
 		<div ref={wrapperRef} className="relative">
 			<button
+				ref={triggerRef}
 				onClick={() => setOpen((o) => !o)}
 				aria-label="User menu"
+				aria-haspopup="menu"
 				aria-expanded={open}
 				className={`w-9 h-9 rounded-lg bg-avatar-bg flex items-center justify-center pt-[3px] text-avatar-fg font-semibold text-sm border-b-[3px] transition-colors ${
 					open
@@ -68,7 +85,10 @@ export default function UserMenu() {
 			</button>
 
 			{open && (
-				<div className="absolute top-full right-0 mt-2 w-54 bg-surface-raised border border-border-subtle rounded-lg shadow-lg z-50 overflow-hidden">
+				<div
+					role="menu"
+					className="absolute top-full right-0 mt-2 w-54 bg-surface-raised border border-border-subtle rounded-lg shadow-lg z-50 overflow-hidden"
+				>
 					<div className="px-4 py-3 border-b border-border-subtle flex items-start gap-3">
 						<span className="w-10 h-10 shrink-0 rounded-lg bg-avatar-bg flex items-center justify-center text-avatar-fg font-semibold text-sm">
 							{initial}
@@ -88,7 +108,9 @@ export default function UserMenu() {
 
 					<div className="p-2 flex flex-col">
 						<button
+							role="menuitem"
 							className="w-full flex items-center gap-1 px-3 py-2 text-sm text-text-primary rounded-md hover:bg-surface transition-colors"
+							aria-expanded={themeOpen}
 							onClick={() => setThemeOpen((o) => !o)}
 						>
 							<Palette size={16} />
@@ -103,7 +125,12 @@ export default function UserMenu() {
 								{THEMES.map(
 									([value, Icon, label]) => (
 										<button
+											role="menuitemradio"
 											key={value}
+											aria-checked={
+												theme ===
+												value
+											}
 											onClick={() =>
 												setTheme(
 													value
@@ -140,11 +167,13 @@ export default function UserMenu() {
 
 					<div className="border-t border-border-subtle p-2">
 						<button
+							role="menuitem"
 							onClick={logout}
-							className="w-full flex items-center gap-2 px-3 py-2 text-sm text-error-text rounded-md hover:bg-error-bg hover:text-error transition-colors"
+							disabled={signingOut}
+							className="w-full flex items-center gap-2 px-3 py-2 text-sm text-text-tertiary rounded-md hover:text-text-primary transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
 						>
 							<LogOut size={16} />
-							Log out
+							{signingOut ? "Signing out…" : "Sign out"}
 						</button>
 					</div>
 				</div>

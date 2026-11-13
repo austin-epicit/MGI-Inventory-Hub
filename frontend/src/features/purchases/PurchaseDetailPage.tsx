@@ -4,11 +4,17 @@ import DetailStatRow from "../../components/detail/DetailStatRow";
 import Card from "../../components/ui/Card";
 import OrderStatusPill from "../../components/ui/OrderStatusPill";
 import Thumb from "../../components/ui/Thumb";
-import { formatDate, formatDateTime, formatMoney, formatQty } from "../../lib/format";
+import {
+	formatDate,
+	formatDateTime,
+	formatMoney,
+	formatPercent,
+	formatQty,
+} from "../../lib/format";
 import { orderLabel } from "../../lib/orderLabel";
 import { usePurchase } from "./hooks";
 
-const TH = "px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wider text-text-muted";
+const TH = "px-3 py-2 text-left text-xs font-medium text-text-tertiary";
 const TD = "px-3 py-2 whitespace-nowrap";
 const NUM = "text-right tabular-nums";
 
@@ -199,7 +205,9 @@ export default function PurchaseDetailPage() {
 											>
 												{l.discountPct >
 												0
-													? `${l.discountPct}%`
+													? formatPercent(
+															l.discountPct
+														)
 													: "—"}
 											</td>
 											<td

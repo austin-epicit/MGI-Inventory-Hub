@@ -51,7 +51,7 @@ describe("api foundation", () => {
 		const res = await request(testApp()).post("/api/_test/echo").send({ n: "x" });
 		expect(res.status).toBe(400);
 		expect(res.body.error.code).toBe("VALIDATION_ERROR");
-		expect(res.body.error.message).toContain("body.n");
+		expect(res.body.error.message).toBe("N: isn't the right kind of value.");
 	});
 
 	it("a bad query param is a 400, not silently dropped", async () => {
@@ -81,7 +81,7 @@ describe("api foundation", () => {
 		expect(ok.body.data).toEqual({ page: 2 });
 		const bad = await request(app).get("/api/_test/page?page=abc");
 		expect(bad.status).toBe(400);
-		expect(bad.body.error.message).toContain("query.page");
+		expect(bad.body.error.message).toBe("Page: isn't the right kind of value.");
 	});
 
 	it("thrown httpError -> its status and code", async () => {

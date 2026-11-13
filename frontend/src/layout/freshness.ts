@@ -11,12 +11,19 @@ export type Freshness = {
 
 export const STALE_AFTER_MS = 30 * 60_000;
 
-const REASONS: Record<string, string> = {
-	CIN7_AUTH: "Cin7 rejected the saved credentials",
-	CIN7_HTTP: "Cin7 could not be reached",
-	CIN7_RATE_LIMIT: "Cin7 rate limit reached",
-	INTERRUPTED: "The last sync was interrupted",
+export const REASONS: Record<string, string> = {
+	CIN7_AUTH: "Cin7 rejected the saved credentials.",
+	CIN7_HTTP: "Couldn't reach Cin7.",
+	CIN7_RATE_LIMIT: "Cin7 rate limit reached.",
+	INTERRUPTED: "The last sync was interrupted.",
 };
+
+export function syncReason(code: string | null): string {
+	return (
+		(code && REASONS[code]) ||
+		"The sync stopped with an unexpected error. It retries automatically."
+	);
+}
 
 export function ago(iso: string, now: number): string {
 	const mins = Math.floor(Math.max(0, now - Date.parse(iso)) / 60_000);
@@ -31,12 +38,7 @@ export function computeFreshness(status: SyncStatus, now: number): Freshness {
 	if (!status.connected) return { tone: "neutral", label: "Cin7 not connected" };
 	const run = status.lastRun;
 	if (run?.status === "failed") {
-		const reason = (run.errorCode && REASONS[run.errorCode]) || run.errorMessage;
-		return {
-			tone: "error",
-			label: "Sync failing",
-			...(reason ? { detail: reason } : {}),
-		};
+		return { tone: "error", label: "Sync failing", detail: syncReason(run.errorCode) };
 	}
 	const skipped = status.quarantined.count;
 	const skippedNote = `${skipped} ${skipped === 1 ? "record" : "records"} skipped`;
@@ -49,7 +51,7 @@ export function computeFreshness(status: SyncStatus, now: number): Freshness {
 	}
 	const label = `Synced ${ago(status.lastSuccessAt, now)}`;
 	if (run?.status === "partial")
-		return { tone: "warning", label, detail: "Some records could not be synced" };
+		return { tone: "warning", label, detail: "Some records couldn't be synced." };
 	if (now - Date.parse(status.lastSuccessAt) > STALE_AFTER_MS)
 		return { tone: "warning", label, detail: "No successful sync in over 30 minutes" };
 	// Skipped records are missing from every total, so the badge must not look healthy.

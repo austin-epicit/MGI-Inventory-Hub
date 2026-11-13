@@ -134,7 +134,7 @@ describe("OverviewPage", () => {
 		render(<OverviewPage />);
 		const up = (await screen.findByText("+20.0%")).closest("span")!;
 		expect(up.className).toContain("text-error-text");
-		const down = screen.getByText("-20.0%").closest("span")!;
+		const down = screen.getByText("−20.0%").closest("span")!;
 		expect(down.className).toContain("text-success-text");
 	});
 
@@ -191,6 +191,10 @@ describe("OverviewPage", () => {
 				)
 		);
 		render(<OverviewPage />);
-		expect(await screen.findByText("Could not load the overview")).toBeInTheDocument();
+		expect(await screen.findByText("Couldn't load the overview")).toBeInTheDocument();
+		expect(screen.queryByText("Could not load the overview")).toBeNull();
+		const calls = fetchSpy.mock.calls.length;
+		await userEvent.setup().click(screen.getByRole("button", { name: "Try again" }));
+		await waitFor(() => expect(fetchSpy.mock.calls.length).toBeGreaterThan(calls));
 	});
 });

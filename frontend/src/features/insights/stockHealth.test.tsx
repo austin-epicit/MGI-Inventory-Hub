@@ -126,14 +126,14 @@ describe("StockAgeCard", () => {
 				"Age is measured from the product's last purchase, not from each unit's receipt."
 			)
 		).toBeInTheDocument();
-		expect(screen.getByText("Positive stock $2,100.00")).toBeInTheDocument();
+		expect(screen.getByText("Total (positive buckets) $2,100.00")).toBeInTheDocument();
 	});
 });
 
 describe("SlowMoversCard", () => {
 	it("shows Never for a product never sold and links each row to the product", async () => {
 		render(<SlowMoversCard />);
-		expect(await screen.findByText(/Never sold/)).toBeInTheDocument();
+		expect(await screen.findByText(/never sold/)).toBeInTheDocument();
 		expect(screen.getByText(/last sold May 2, 2026/)).toBeInTheDocument();
 		expect(screen.getByRole("link", { name: "Rack Rail" })).toHaveAttribute(
 			"href",
@@ -210,7 +210,7 @@ describe("stock CSV export", () => {
 		expect(filename.startsWith("mgi-insights-stock-age-")).toBe(true);
 		expect(rows).toEqual(stock().age);
 		const lines = toCsv(columns, rows).split("\r\n");
-		expect(lines[0]).toBe("\uFEFFAge (days),Products,Units,Stock value");
+		expect(lines[0]).toBe("\uFEFFAge,Products,Units,Stock value");
 		expect(lines[1]).toBe("0\u201330 days,1,1,100");
 		expect(lines[6]).toBe("No purchase on record,6,6,600");
 	});

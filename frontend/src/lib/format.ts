@@ -60,6 +60,34 @@ const qtyFormat = new Intl.NumberFormat("en-US", { maximumFractionDigits: 4 });
 // Quantities: Cin7 allows fractional units, up to 4 dp.
 export const formatQty = (n: number): string => qtyFormat.format(n);
 
+const countFormat = new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 });
+
+export const formatCount = (n: number): string => countFormat.format(n);
+
+// Word only, so call sites keep their own number formatting: `${formatCount(n)} ${plural(n, "unit")}`.
+export const plural = (n: number, singular: string, pluralForm: string = `${singular}s`): string =>
+	n === 1 ? singular : pluralForm;
+
+const percentFormats = new Map<number, Intl.NumberFormat>();
+
+// Rounds to the displayed precision before choosing a sign, so -0.03 reads "0.0%" and never "−0.0%".
+export function formatPercent(n: number, opts: { signed?: boolean; dp?: number } = {}): string {
+	const dp = opts.dp ?? 1;
+	let f = percentFormats.get(dp);
+	if (!f) {
+		f = new Intl.NumberFormat("en-US", {
+			minimumFractionDigits: dp,
+			maximumFractionDigits: dp,
+		});
+		percentFormats.set(dp, f);
+	}
+	const body = f.format(Math.abs(n));
+	const rounded = Number(body.replace(/,/g, ""));
+	if (rounded === 0) return `${body}%`;
+	const sign = n < 0 ? "−" : opts.signed ? "+" : "";
+	return `${sign}${body}%`;
+}
+
 const compactMoneyFormats = new Map<string, Intl.NumberFormat>();
 
 // Axis ticks: "$1.2K". An unknown currency code falls back to the full amount.

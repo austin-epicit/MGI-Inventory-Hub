@@ -162,7 +162,7 @@ describe("InsightsPage", () => {
 		expect(window.history.length).toBe(before);
 	});
 
-	it("shows an error with Retry when the trend can't load, and retries", async () => {
+	it("shows an error with Try again when the trend can't load, and retries", async () => {
 		const user = userEvent.setup();
 		fetchMock.mockRejectedValue(new Error("boom"));
 		render(<InsightsPage />);
@@ -172,7 +172,7 @@ describe("InsightsPage", () => {
 		expect(screen.getByText("Couldn't load the sales mix")).toBeInTheDocument();
 		const calls = fetchMock.mock.calls.length;
 		fetchMock.mockResolvedValue(trend());
-		await user.click(screen.getAllByRole("button", { name: "Retry" })[0]!);
+		await user.click(screen.getAllByRole("button", { name: "Try again" })[0]!);
 		await waitFor(() => expect(fetchMock.mock.calls.length).toBeGreaterThan(calls));
 	});
 });
@@ -303,14 +303,7 @@ describe("BreakdownCard", () => {
 		render(<InsightsPage />);
 		await waitFor(() => expect(breakdownMock).toHaveBeenCalledWith("1y", "category"));
 		const table = await screen.findByRole("table", { name: "Breakdown by category" });
-		for (const h of [
-			"Category",
-			"Sales",
-			"Gross profit",
-			"Margin %",
-			"Units",
-			"Orders",
-		])
+		for (const h of ["Category", "Sales", "Gross profit", "Margin", "Units", "Orders"])
 			expect(
 				within(table).getByRole("columnheader", { name: h })
 			).toBeInTheDocument();
@@ -353,12 +346,12 @@ describe("BreakdownCard", () => {
 		);
 		render(<InsightsPage />);
 		const table = await screen.findByRole("table", { name: "Breakdown by supplier" });
-		for (const h of ["Spend", "Units bought", "POs", "Products"])
+		for (const h of ["Spend", "Units bought", "Orders", "Products"])
 			expect(
 				within(table).getByRole("columnheader", { name: h })
 			).toBeInTheDocument();
 		expect(
-			within(table).queryByRole("columnheader", { name: "Margin %" })
+			within(table).queryByRole("columnheader", { name: "Margin" })
 		).not.toBeInTheDocument();
 		expect(screen.getByRole("link", { name: "Acme" })).toHaveAttribute(
 			"href",
@@ -436,7 +429,7 @@ describe("TopProductsCard", () => {
 		expect(within(table).getByText("SRV-1")).toBeInTheDocument();
 		expect(within(table).getByText("$900.00")).toBeInTheDocument();
 		expect(within(table).getByText("33.3%")).toBeInTheDocument();
-		for (const h of ["Sales", "Gross profit", "Margin %", "Units sold", "On hand"])
+		for (const h of ["Sales", "Gross profit", "Margin", "Units sold", "On hand"])
 			expect(
 				within(table).getByRole("columnheader", { name: h })
 			).toBeInTheDocument();
@@ -586,7 +579,7 @@ describe("insights CSV export", () => {
 		const [filename, columns, rows] = lastCall();
 		expect(filename.startsWith("mgi-insights-breakdown-supplier-90d-")).toBe(true);
 		expect(toCsv(columns, rows).split("\r\n")[0]).toBe(
-			"\uFEFFSupplier,Spend,Units bought,POs,Products"
+			"\uFEFFSupplier,Spend,Units bought,Orders,Products"
 		);
 	});
 

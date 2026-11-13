@@ -9,7 +9,7 @@ export interface ErrorDetails {
 	code: string;
 	message: string;
 	details?: unknown;
-	field?: string;
+	field?: string | null;
 }
 
 export interface ResponseMeta {
@@ -35,7 +35,7 @@ export const createErrorResponse = (
 	code: string,
 	message: string,
 	details?: unknown,
-	field?: string
+	field?: string | null
 ): ApiResponse<null> => ({
 	success: false,
 	data: null,
@@ -48,6 +48,8 @@ export const createErrorResponse = (
 export interface HttpError extends Error {
 	statusCode: number;
 	code: string;
+	details?: unknown;
+	field?: string | null;
 }
 
 export const httpError = (statusCode: number, code: string, message: string): HttpError => {

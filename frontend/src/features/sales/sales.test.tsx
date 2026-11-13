@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi, type MockInstance } from "vitest";
+import { clickExport } from "../../test/clickExport";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -104,13 +105,15 @@ describe("SalesPage", () => {
 		render(<SalesPage />);
 		await screen.findByText("SO-0007");
 		const user = userEvent.setup();
-		await user.click(screen.getByRole("button", { name: /^Status/ }));
+		await user.click(screen.getByRole("button", { name: /^Status/, expanded: false }));
 		await user.click(await screen.findByRole("option", { name: "Picking" }));
 		await waitFor(() => expect(listCalls().at(-1)!.get("status")).toBe("PICKING"));
-		await user.click(screen.getByRole("button", { name: /^Tier/ }));
+		await user.click(screen.getByRole("button", { name: /^Tier/, expanded: false }));
 		await user.click(await screen.findByRole("option", { name: "Wholesale" }));
 		await waitFor(() => expect(listCalls().at(-1)!.get("tier")).toBe("Wholesale"));
-		await user.click(screen.getByRole("button", { name: /^Customer/ }));
+		await user.click(
+			screen.getByRole("button", { name: /^Customer/, expanded: false })
+		);
 		await user.click(await screen.findByRole("option", { name: "Initech" }));
 		await waitFor(() => expect(listCalls().at(-1)!.get("customerId")).toBe("c1"));
 	});
@@ -126,19 +129,55 @@ describe("SalesPage", () => {
 	});
 });
 
+describe("SalesPage facet failures", () => {
+	afterEach(() => window.history.replaceState(null, "", "/"));
+
+	it("says the customer name couldn't load, and Try again refetches the options", async () => {
+		rows = [row()];
+		window.history.replaceState(null, "", "/sales?customerId=c1");
+		let down = true;
+		fetchSpy.mockImplementation(async (url) => {
+			if (String(url).startsWith("/api/sales/facets"))
+				return down
+					? new Response("<html>bad gateway</html>", { status: 502 })
+					: reply({
+							statuses: ["COMPLETED"],
+							customers: [{ id: "c1", name: "Initech" }],
+							tiers: ["Retail"],
+						});
+			return reply(rows, rows.length);
+		});
+		render(<SalesPage />);
+		expect(
+			await screen.findByText("Customer: (couldn't load name)")
+		).toBeInTheDocument();
+		expect(screen.queryByText("Customer: …")).toBeNull();
+		const user = userEvent.setup();
+		await user.click(
+			screen.getByRole("button", { name: /^Customer/, expanded: false })
+		);
+		const list = screen.getByRole("listbox", { name: "Customer" });
+		expect(within(list).getByText("Couldn't load options.")).toBeInTheDocument();
+		down = false;
+		await user.click(within(list).getByRole("button", { name: "Try again" }));
+		expect((await screen.findAllByText("Customer: Initech")).length).toBeGreaterThan(0);
+	});
+});
+
 describe("SalesPage export", () => {
-	it("links the server export with customer and tier, and no paging", async () => {
+	it("requests the server export with customer and tier, and no paging", async () => {
 		rows = [row()];
 		render(<SalesPage />);
 		await screen.findByText("SO-0007");
 		const user = userEvent.setup();
-		await user.click(screen.getByRole("button", { name: /^Tier/ }));
+		await user.click(screen.getByRole("button", { name: /^Tier/, expanded: false }));
 		await user.click(await screen.findByRole("option", { name: "Wholesale" }));
-		await user.click(screen.getByRole("button", { name: /^Customer/ }));
+		await user.click(
+			screen.getByRole("button", { name: /^Customer/, expanded: false })
+		);
 		await user.click(await screen.findByRole("option", { name: "Initech" }));
 		await waitFor(() => expect(listCalls().at(-1)!.get("customerId")).toBe("c1"));
-		const link = await screen.findByRole("link", { name: "Export CSV" });
-		const url = new URL(link.getAttribute("href")!, "http://x");
+		const url = await clickExport(fetchSpy);
 		expect(url.pathname).toBe("/api/sales/export.csv");
 		expect(url.searchParams.get("customerId")).toBe("c1");
 		expect(url.searchParams.get("tier")).toBe("Wholesale");

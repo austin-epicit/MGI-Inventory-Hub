@@ -95,7 +95,10 @@ describe("RequireAuth", () => {
 		const spy = vi
 			.spyOn(globalThis, "fetch")
 			.mockResolvedValueOnce(
-				envelope(503, null, { code: "SERVER_ERROR", message: "down" })
+				new Response("", {
+					status: 500,
+					headers: { "Content-Type": "text/plain" },
+				})
 			)
 			.mockResolvedValueOnce(
 				envelope(200, {
@@ -108,7 +111,9 @@ describe("RequireAuth", () => {
 		await act(async () => {
 			renderAt("/");
 		});
-		expect(screen.getByRole("alert")).toHaveTextContent(/can.t reach the server/i);
+		expect(screen.getByRole("alert")).toHaveTextContent(
+			"The server isn't responding. Try again in a moment."
+		);
 		expect(screen.queryByText(/login screen/)).toBeNull();
 		await userEvent.click(screen.getByRole("button", { name: "Try again" }));
 		expect(await screen.findByText("home")).toBeInTheDocument();
@@ -120,6 +125,9 @@ describe("RequireAuth", () => {
 		await act(async () => {
 			renderAt("/");
 		});
+		expect(screen.getByRole("alert")).toHaveTextContent(
+			"Can't reach the server. Check your connection and try again."
+		);
 		expect(screen.getByRole("button", { name: "Try again" })).toBeInTheDocument();
 	});
 });

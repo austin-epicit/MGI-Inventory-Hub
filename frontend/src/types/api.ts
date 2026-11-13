@@ -4,6 +4,7 @@ export interface ApiResponse<T> {
 	error: {
 		code: string;
 		message: string;
+		field?: string | null;
 		// Machine-readable payload for errors a caller can act on rather than
 		// just display — e.g. a 409 carries the row that already exists.
 		details?: unknown;

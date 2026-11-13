@@ -7,7 +7,7 @@ import { ChartTooltipShell, QueryErrorState } from "../../components/charts/char
 import Card from "../../components/ui/Card";
 import EmptyState from "../../components/ui/EmptyState";
 import SegmentedToggle from "../../components/ui/SegmentedToggle";
-import { formatMoney, formatMoneyCompact } from "../../lib/format";
+import { formatMoney, formatMoneyCompact, formatPercent } from "../../lib/format";
 import type { PriceRange } from "../../types/priceHistory";
 import { useInsightsTrend } from "./hooks";
 import { mixColor, mixRows, type MixMode, type MixRow } from "./mixSeries";
@@ -56,7 +56,7 @@ function MixTooltip({
 					<span className="ml-auto pl-3 font-semibold tabular-nums text-text-primary">
 						{mode === "amount"
 							? formatMoney(r.values[s.key] ?? 0)
-							: `${(r.values[s.key] ?? 0).toFixed(1)}%`}
+							: formatPercent(r.values[s.key] ?? 0)}
 					</span>
 				</p>
 			))}
@@ -94,7 +94,11 @@ export default function CategoryMixCard({ range }: { range: PriceRange }) {
 			<EmptyState
 				icon={<BarChart3 size={26} />}
 				title="No sales in this range"
-				description="Pick a longer range to see older orders."
+				description={
+					range === "all"
+						? "Counted orders show up here once Cin7 has some."
+						: "Pick a longer range to see older orders."
+				}
 			/>
 		);
 	else
@@ -139,7 +143,13 @@ export default function CategoryMixCard({ range }: { range: PriceRange }) {
 								width={64}
 								tickFormatter={(v: number) =>
 									mode === "share"
-										? `${Math.round(v * 100)}%`
+										? formatPercent(
+												v *
+													100,
+												{
+													dp: 0,
+												}
+											)
 										: formatMoneyCompact(
 												v
 											)

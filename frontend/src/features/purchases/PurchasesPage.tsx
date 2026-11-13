@@ -80,7 +80,7 @@ export default function PurchasesPage() {
 		sort: sort.sortKey as PurchaseSortKey | undefined,
 		dir: sort.sortKey ? sort.sortDir : undefined,
 	};
-	const { data, isLoading, isFetching, error } = usePurchases({
+	const { data, isLoading, isFetching, error, refetch } = usePurchases({
 		...query,
 		page: page + 1,
 		limit: pageSize,
@@ -171,7 +171,7 @@ export default function PurchasesPage() {
 				className="mb-4"
 				left={
 					<SearchBar
-						placeholder="Search by order number or supplier..."
+						placeholder="Search by order number or supplier…"
 						value={searchInput}
 						onChange={filtered(setSearchInput)}
 					/>
@@ -195,6 +195,8 @@ export default function PurchasesPage() {
 									label: s.name,
 								})
 							)}
+							loadError={facets.isError}
+							onRetryOptions={() => void facets.refetch()}
 						/>
 						<DropdownFilter
 							placeholder="Status"
@@ -208,6 +210,8 @@ export default function PurchasesPage() {
 									label: orderLabel(v),
 								})
 							)}
+							loadError={facets.isError}
+							onRetryOptions={() => void facets.refetch()}
 						/>
 					</>
 				}
@@ -236,7 +240,14 @@ export default function PurchasesPage() {
 						: null,
 					supplierId
 						? {
-								label: `Supplier: ${supplierName ?? (facets.data ? "Unknown" : "…")}`,
+								label: `Supplier: ${
+									supplierName ??
+									(facets.isError
+										? "(couldn't load name)"
+										: facets.data
+											? "Unknown"
+											: "…")
+								}`,
 								color: "blue" as const,
 								onRemove: () =>
 									filtered(setSupplierId)(
@@ -277,6 +288,9 @@ export default function PurchasesPage() {
 							data={displayRows}
 							loadListener={isLoading}
 							errListener={error}
+							errorWhat="purchase orders"
+							onRetry={() => void refetch()}
+							onClearFilters={clearAll}
 							formatNums={false}
 							headerLabels={HEADER_LABELS}
 							columnAlign={COLUMN_ALIGN}

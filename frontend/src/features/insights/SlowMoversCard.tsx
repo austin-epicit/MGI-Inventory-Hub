@@ -20,7 +20,7 @@ const CSV_COLUMNS: CsvColumn<SlowMover>[] = [
 	{ label: "Last sold", value: (r) => r.lastSold },
 ];
 
-const TH_BASE = "px-2 py-1.5 font-medium text-text-muted whitespace-nowrap";
+const TH_BASE = "px-2 py-1.5 text-xs font-medium text-text-tertiary whitespace-nowrap";
 const TH = `${TH_BASE} text-right`;
 const TH_LEFT = `${TH_BASE} text-left`;
 const TD = "px-2 py-1.5 text-right tabular-nums whitespace-nowrap";
@@ -28,7 +28,7 @@ const TD = "px-2 py-1.5 text-right tabular-nums whitespace-nowrap";
 /** Products holding stock with no counted sale in the last 90 days, biggest stock value first. */
 // Narrow card (a third of the row): on-hand and last-sold ride under the name, not in columns.
 const rowDetail = (r: InsightsStock["slowMovers"][number]): string =>
-	`${r.sku} · ${formatQty(r.onHand)} on hand · ${r.lastSold ? `last sold ${formatDate(r.lastSold)}` : "Never sold"}`;
+	`${r.sku} · ${formatQty(r.onHand)} on hand · ${r.lastSold ? `last sold ${formatDate(r.lastSold)}` : "never sold"}`;
 
 export default function SlowMoversCard() {
 	const { data, isLoading, error, refetch } = useInsightsStock();
@@ -93,7 +93,7 @@ export default function SlowMoversCard() {
 											<div className="min-w-0 leading-tight">
 												<Link
 													to={`/products/${r.productId}`}
-													className="line-clamp-2 break-words text-primary-text hover:underline"
+													className="line-clamp-2 break-words text-text-link hover:underline"
 													title={
 														r.name
 													}

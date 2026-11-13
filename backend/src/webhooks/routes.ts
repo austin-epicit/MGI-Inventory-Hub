@@ -195,7 +195,7 @@ export const createWebhookAdminRoutes = (
 				throw httpError(
 					502,
 					"CIN7_UNREACHABLE",
-					"Could not reach Cin7. Try again shortly"
+					"Couldn't reach Cin7. Try again shortly."
 				);
 			throw e;
 		}

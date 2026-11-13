@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../auth/store";
+import { errorMessage } from "../lib/api";
 import { useSyncStatus } from "../features/settings/hooks";
 import { computeFreshness, type FreshnessTone } from "./freshness";
 
@@ -26,10 +27,7 @@ export default function FreshnessIndicator() {
 		? {
 				tone: "warning" as const,
 				label: "Status unavailable",
-				detail:
-					error instanceof Error
-						? error.message
-						: "Could not load the sync status",
+				detail: errorMessage(error),
 			}
 		: computeFreshness(data!, now);
 	const className = `inline-flex max-w-72 items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs font-medium whitespace-nowrap ${TONE[tone]}`;

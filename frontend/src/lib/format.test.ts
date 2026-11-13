@@ -1,11 +1,14 @@
 import { describe, expect, it, vi } from "vitest";
 import {
+	formatCount,
 	formatDate,
 	formatDateTime,
 	formatMoney,
 	formatMoneyCompact,
+	formatPercent,
 	formatQty,
 	formatRelative,
+	plural,
 	setFormatContext,
 } from "./format";
 
@@ -108,5 +111,41 @@ describe("setFormatContext", () => {
 		setFormatContext({ timeZone: "Eastern Standard Time" });
 		expect(formatDateTime("2026-03-01T00:00:00.000Z")).toBe("Mar 1, 2026, 9:00 AM");
 		setFormatContext({ timeZone: "America/Los_Angeles" });
+	});
+});
+
+describe("formatPercent", () => {
+	it("rounds to one decimal", () => {
+		expect(formatPercent(12.345)).toBe("12.3%");
+		expect(formatPercent(33.333333)).toBe("33.3%");
+	});
+
+	it("signs with a real minus and an explicit plus", () => {
+		expect(formatPercent(-4.2, { signed: true })).toBe("−4.2%");
+		expect(formatPercent(3, { signed: true })).toBe("+3.0%");
+	});
+
+	it("never prints a signed zero", () => {
+		expect(formatPercent(-0.03, { signed: true })).toBe("0.0%");
+		expect(formatPercent(-0.03)).toBe("0.0%");
+	});
+
+	it("honours dp", () => {
+		expect(formatPercent(12.345, { dp: 0 })).toBe("12%");
+	});
+});
+
+describe("formatCount", () => {
+	it("groups thousands in en-US", () => {
+		expect(formatCount(12345)).toBe("12,345");
+	});
+});
+
+describe("plural", () => {
+	it("picks the word by count", () => {
+		expect(plural(1, "unit")).toBe("unit");
+		expect(plural(2, "unit")).toBe("units");
+		expect(plural(0, "unit")).toBe("units");
+		expect(plural(2, "entry", "entries")).toBe("entries");
 	});
 });

@@ -4,9 +4,9 @@ import ConfirmDialog from "../../components/ui/ConfirmDialog";
 import { HEADER_BTN_PRIMARY, HEADER_BTN_SECONDARY } from "../../components/ui/headerActions";
 import StatCard from "../../components/ui/StatCard";
 import { useToast } from "../../hooks/useToast";
-import { ApiError } from "../../lib/api";
-import { formatDateTime } from "../../lib/format";
-import { ago } from "../../layout/freshness";
+import { errorMessage } from "../../lib/api";
+import { formatCount, formatDateTime, formatPercent, plural } from "../../lib/format";
+import { ago, syncReason } from "../../layout/freshness";
 import type { RemapEntity, SyncKind } from "./api";
 import { useRemap, useRunSync, useSyncStatus } from "./hooks";
 
@@ -24,9 +24,6 @@ const REMAPS: { entity: RemapEntity; label: string }[] = [
 	{ entity: "sale", label: "Sales orders" },
 ];
 
-const message = (err: unknown) =>
-	err instanceof ApiError ? err.message : "Could not reach the server";
-
 export default function SyncStatusCard() {
 	const { data, isLoading, isError, refetch } = useSyncStatus();
 	const run = useRunSync();
@@ -37,7 +34,7 @@ export default function SyncStatusCard() {
 	const start = (kind: SyncKind) =>
 		run.mutate(kind, {
 			onSuccess: () => toast.info("Sync started"),
-			onError: (err) => toast.error(message(err)),
+			onError: (err) => toast.error(errorMessage(err)),
 		});
 
 	if (isLoading) {
@@ -51,7 +48,7 @@ export default function SyncStatusCard() {
 		return (
 			<Card title="Sync status">
 				<div className="flex items-center gap-3 text-sm text-error-text">
-					<span role="alert">Could not load the sync status.</span>
+					<span role="alert">Couldn't load the sync status.</span>
 					<button
 						type="button"
 						className={HEADER_BTN_SECONDARY}
@@ -131,15 +128,19 @@ export default function SyncStatusCard() {
 									: undefined
 						}
 						hint={
-							last?.status === "failed"
-								? (last.errorMessage ??
-									last.errorCode ??
-									undefined)
-								: last?.finishedAt
-									? formatDateTime(
-											last.finishedAt
-										)
-									: undefined
+							last?.status === "failed" ? (
+								<span
+									title={
+										last.errorMessage ??
+										last.errorCode ??
+										undefined
+									}
+								>
+									{syncReason(last.errorCode)}
+								</span>
+							) : last?.finishedAt ? (
+								formatDateTime(last.finishedAt)
+							) : undefined
 						}
 					/>
 					<StatCard
@@ -147,7 +148,10 @@ export default function SyncStatusCard() {
 						value={
 							data.backfill.done
 								? "Done"
-								: `${data.backfill.progressPct}%`
+								: formatPercent(
+										data.backfill
+											.progressPct
+									)
 						}
 						hint={
 							data.backfill.done
@@ -159,9 +163,9 @@ export default function SyncStatusCard() {
 
 				<table className="w-full text-sm">
 					<thead>
-						<tr className="text-left text-xs uppercase tracking-wide text-text-muted">
-							<th className="py-1 font-semibold">Data</th>
-							<th className="py-1 font-semibold">
+						<tr className="text-left text-xs font-medium text-text-tertiary">
+							<th className="py-1 font-medium">Data</th>
+							<th className="py-1 font-medium">
 								Last synced
 							</th>
 						</tr>
@@ -193,10 +197,8 @@ export default function SyncStatusCard() {
 				{data.quarantined.count > 0 && (
 					<div>
 						<h4 className="mb-1 text-sm font-semibold text-warning-text">
-							{data.quarantined.count} record
-							{data.quarantined.count === 1
-								? ""
-								: "s"}{" "}
+							{formatCount(data.quarantined.count)}{" "}
+							{plural(data.quarantined.count, "record")}{" "}
 							skipped after repeated failures
 						</h4>
 						<p className="mb-2 text-xs text-text-muted">
@@ -221,12 +223,23 @@ export default function SyncStatusCard() {
 										{q.recordId}
 									</span>
 									<span className="text-text-muted">
-										{q.attempts}{" "}
-										attempts ·{" "}
-										{q.lastCode}
+										{formatCount(
+											q.attempts
+										)}{" "}
+										{plural(
+											q.attempts,
+											"attempt"
+										)}
 									</span>
-									<span className="min-w-0 flex-1 truncate text-text-tertiary">
-										{q.lastMessage}
+									<span
+										className="min-w-0 flex-1 truncate text-text-tertiary"
+										title={
+											q.lastMessage
+										}
+									>
+										{syncReason(
+											q.lastCode
+										)}
 									</span>
 								</li>
 							))}
@@ -267,7 +280,7 @@ export default function SyncStatusCard() {
 				body="This re-reads every stored record of this kind. It makes no Cin7 calls and blocks other syncs until it finishes."
 				confirmLabel="Rebuild"
 				pending={remap.isPending}
-				error={remap.isError ? message(remap.error) : null}
+				error={remap.isError ? errorMessage(remap.error) : null}
 				onConfirm={async () => {
 					if (!pendingRemap) return;
 					const out = await remap
@@ -275,9 +288,9 @@ export default function SyncStatusCard() {
 						.catch(() => null);
 					if (!out) return;
 					toast.success(
-						`Rebuilt ${out.remapped} records` +
+						`Rebuilt ${formatCount(out.remapped)} ${plural(out.remapped, "record")}` +
 							(out.skipped
-								? `, skipped ${out.skipped} unreadable`
+								? `, skipped ${formatCount(out.skipped)} unreadable`
 								: "")
 					);
 					setPendingRemap(null);

@@ -5,7 +5,7 @@ import Card from "../../components/ui/Card";
 import EmptyState from "../../components/ui/EmptyState";
 import ExportButton from "../../components/ui/ExportButton";
 import { downloadCsv, localYmd, type CsvColumn } from "../../lib/csv";
-import { formatMoney, formatQty } from "../../lib/format";
+import { formatCount, formatMoney, formatQty, plural } from "../../lib/format";
 import type { AgeBucket, InsightsStock } from "./api";
 import { useInsightsStock } from "./hooks";
 
@@ -20,7 +20,7 @@ const BUCKET_LABEL: Record<AgeBucket, string> = {
 
 // Bucket names use en dashes so a spreadsheet never reads "31-90" as a date.
 const CSV_COLUMNS: CsvColumn<InsightsStock["age"][number]>[] = [
-	{ label: "Age (days)", value: (a) => BUCKET_LABEL[a.bucket] },
+	{ label: "Age", value: (a) => BUCKET_LABEL[a.bucket] },
 	{ label: "Products", value: (a) => a.products },
 	{ label: "Units", value: (a) => a.units },
 	{ label: "Stock value", value: (a) => a.value },
@@ -79,16 +79,21 @@ export default function StockAgeCard() {
 											a.value
 										)}
 										<span className="ml-1.5 text-text-muted">
-											{a.products}{" "}
-											{a.products ===
-											1
-												? "product"
-												: "products"}
+											{formatCount(
+												a.products
+											)}{" "}
+											{plural(
+												a.products,
+												"product"
+											)}
 											,{" "}
 											{formatQty(
 												a.units
 											)}{" "}
-											units
+											{plural(
+												a.units,
+												"unit"
+											)}
 										</span>
 									</span>
 								</div>
@@ -109,7 +114,7 @@ export default function StockAgeCard() {
 						))}
 					</ul>
 					<p className="mt-3 text-xs text-text-muted">
-						Positive stock {formatMoney(total)}
+						Total (positive buckets) {formatMoney(total)}
 					</p>
 				</>
 			);

@@ -38,7 +38,7 @@ function StatusPill({ status }: { status: string }) {
 	);
 }
 
-const TH = "px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wider text-text-muted";
+const TH = "px-3 py-2 text-left text-xs font-medium text-text-tertiary";
 const TD = "px-3 py-2 whitespace-nowrap";
 const NUM = "text-right tabular-nums";
 
@@ -160,6 +160,7 @@ function OrdersCard<T extends { counted: boolean }>({
 		isLoading: boolean;
 		isFetching: boolean;
 		error: Error | null;
+		refetch: () => unknown;
 	};
 	page: number;
 	onPage: (p: number) => void;
@@ -174,6 +175,7 @@ function OrdersCard<T extends { counted: boolean }>({
 				loading={query.isLoading}
 				error={query.error}
 				errorMessage={`Couldn't load ${what}`}
+				onRetry={() => void query.refetch()}
 				isEmpty={total === 0}
 				emptyMessage={`No ${what} for this product`}
 				skeletonClassName="h-40 m-4 rounded-lg"
@@ -258,7 +260,7 @@ const SALE_COLUMNS: Column<ProductSaleRow>[] = [
 	{ header: "Order", cell: (r) => orderLink(`/sales/${r.saleId}`, r.orderNumber) },
 	{ header: "Date", cell: (r) => dateCell(r.orderDate) },
 	{ header: "Customer", cell: (r) => party(r.customer) },
-	{ header: "Tier", cell: (r) => r.priceTierName ?? "No tier" },
+	{ header: "Tier", cell: (r) => r.priceTierName ?? "—" },
 	{ header: "Status", cell: (r) => <OrderStatusPill status={r.status} /> },
 	{ header: "Qty", numeric: true, cell: (r) => formatQty(r.quantity) },
 	{ header: "Sold price", numeric: true, cell: (r) => formatMoney(r.unitPriceBase) },
@@ -323,7 +325,10 @@ export default function ProductDetailPage() {
 	);
 
 	if (detail.error) {
-		const missing = detail.error instanceof ApiError && detail.error.status === 404;
+		// A malformed id is a 400; retrying it can never work.
+		const missing =
+			detail.error instanceof ApiError &&
+			(detail.error.status === 404 || detail.error.status === 400);
 		return (
 			<div className="text-text-primary">
 				{back}
@@ -343,7 +348,7 @@ export default function ProductDetailPage() {
 						missing
 							? undefined
 							: {
-									label: "Retry",
+									label: "Try again",
 									onClick: () =>
 										detail.refetch(),
 								}
@@ -369,7 +374,9 @@ export default function ProductDetailPage() {
 		<div className="flex flex-col gap-4 text-text-primary">
 			<div>
 				{back}
-				<h2 className="text-2xl font-semibold">{product.name}</h2>
+				<h2 className="break-words text-2xl font-semibold">
+					{product.name}
+				</h2>
 				<div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-text-tertiary">
 					<span className="font-mono text-text-secondary">
 						{product.sku}

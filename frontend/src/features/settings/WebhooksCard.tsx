@@ -1,12 +1,9 @@
 import Card from "../../components/ui/Card";
 import { HEADER_BTN_PRIMARY, HEADER_BTN_SECONDARY } from "../../components/ui/headerActions";
 import { useToast } from "../../hooks/useToast";
-import { ApiError } from "../../lib/api";
+import { errorMessage } from "../../lib/api";
 import { formatDateTime } from "../../lib/format";
 import { useRegisterWebhooks, useSyncStatus, useWebhooks } from "./hooks";
-
-const errorText = (err: unknown) =>
-	err instanceof ApiError ? err.message : "Could not reach the server";
 
 export default function WebhooksCard() {
 	const { data, isLoading, isError, refetch } = useWebhooks();
@@ -71,7 +68,7 @@ export default function WebhooksCard() {
 				{statusFailed && (
 					<div className="flex items-center gap-3 text-sm text-error-text">
 						<span role="alert">
-							Could not check the Cin7 connection.
+							Couldn't check the Cin7 connection.
 						</span>
 						<button
 							type="button"
@@ -85,7 +82,7 @@ export default function WebhooksCard() {
 
 				{register.isError && (
 					<p role="alert" className="text-sm text-error-text">
-						{errorText(register.error)}
+						{errorMessage(register.error)}
 					</p>
 				)}
 
@@ -105,7 +102,7 @@ export default function WebhooksCard() {
 				) : isError || !data ? (
 					<div className="flex items-center gap-3 text-sm text-error-text">
 						<span role="alert">
-							Could not load the webhook state.
+							Couldn't load the webhook state.
 						</span>
 						<button
 							type="button"

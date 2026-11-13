@@ -9,7 +9,7 @@ import ExportButton from "../../components/ui/ExportButton";
 import SegmentedToggle from "../../components/ui/SegmentedToggle";
 import Thumb from "../../components/ui/Thumb";
 import { downloadCsv, localYmd, type CsvColumn } from "../../lib/csv";
-import { formatMoney, formatQty } from "../../lib/format";
+import { formatMoney, formatPercent, formatQty } from "../../lib/format";
 import type { PriceRange } from "../../types/priceHistory";
 import type { TopProductRow, TopProductSort } from "./api";
 import { useTopProducts } from "./hooks";
@@ -30,7 +30,7 @@ const CSV_COLUMNS: CsvColumn<TopProductRow>[] = [
 	{ label: "On hand", value: (r) => r.onHand },
 ];
 
-const TH_BASE = "px-2 py-1.5 font-medium text-text-muted whitespace-nowrap";
+const TH_BASE = "px-2 py-1.5 text-xs font-medium text-text-tertiary whitespace-nowrap";
 const TH = `${TH_BASE} text-right`;
 const TH_LEFT = `${TH_BASE} text-left`;
 const TD = "px-2 py-1.5 text-right tabular-nums whitespace-nowrap";
@@ -64,7 +64,11 @@ export default function TopProductsCard({ range }: { range: PriceRange }) {
 			<EmptyState
 				icon={<Package size={26} />}
 				title="No products to rank in this range"
-				description="Pick a longer range to see older orders."
+				description={
+					range === "all"
+						? "Counted orders show up here once Cin7 has some."
+						: "Pick a longer range to see older orders."
+				}
 			/>
 		);
 	else
@@ -76,7 +80,7 @@ export default function TopProductsCard({ range }: { range: PriceRange }) {
 							<th className={TH_LEFT}>Product</th>
 							<th className={TH}>Sales</th>
 							<th className={TH}>Gross profit</th>
-							<th className={TH}>Margin %</th>
+							<th className={TH}>Margin</th>
 							<th className={TH}>Units sold</th>
 							<th className={TH}>On hand</th>
 						</tr>
@@ -100,7 +104,7 @@ export default function TopProductsCard({ range }: { range: PriceRange }) {
 										<div className="min-w-0 leading-tight">
 											<Link
 												to={`/products/${r.productId}`}
-												className="block max-w-[260px] truncate text-primary-text hover:underline"
+												className="block max-w-[260px] truncate text-text-link hover:underline"
 												title={
 													r.name
 												}
@@ -130,7 +134,9 @@ export default function TopProductsCard({ range }: { range: PriceRange }) {
 								<td className={TD}>
 									{r.marginPct === null
 										? "—"
-										: `${r.marginPct.toFixed(1)}%`}
+										: formatPercent(
+												r.marginPct
+											)}
 								</td>
 								<td className={TD}>
 									{formatQty(r.units)}

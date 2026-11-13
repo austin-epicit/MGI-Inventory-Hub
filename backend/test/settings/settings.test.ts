@@ -115,6 +115,9 @@ describe("PUT /api/settings/cin7", () => {
 		const res = await agent.put("/api/settings/cin7").send(GOOD);
 		expect(res.status).toBe(502);
 		expect(res.body.error.code).toBe("CIN7_UNREACHABLE");
+		expect(res.body.error.message).toBe(
+			"Couldn't reach Cin7. Check the connection and try again."
+		);
 		expect(await testDb.cin7_connection.count()).toBe(0);
 	});
 

@@ -1,3 +1,5 @@
+import { useEffect } from "react";
+import { useLocation } from "react-router-dom";
 import PageHeader from "../../components/ui/PageHeader";
 import AlertsSettingsCard from "../alerts/AlertsSettingsCard";
 import Cin7ConnectionCard from "./Cin7ConnectionCard";
@@ -6,6 +8,11 @@ import UsersCard from "./UsersCard";
 import WebhooksCard from "./WebhooksCard";
 
 export default function SettingsPage() {
+	const { hash } = useLocation();
+	// Router links don't scroll to a hash on their own (the Alerts page links to #alerts-settings).
+	useEffect(() => {
+		if (hash) document.getElementById(hash.slice(1))?.scrollIntoView();
+	}, [hash]);
 	return (
 		<>
 			<PageHeader title="Settings" />

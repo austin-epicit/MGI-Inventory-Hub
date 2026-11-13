@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
 import { Navigate, Outlet, useLocation } from "react-router-dom";
-import { api, ApiError } from "../lib/api";
+import { api, ApiError, errorMessage } from "../lib/api";
 import type { PublicUser } from "../types/user";
 import { authButton } from "./authForm";
 import { useAuth } from "./store";
 
-type Check = "pending" | "done" | "failed";
+type Check = "pending" | "done" | { failed: string };
 
 // Asks the server who the cookie belongs to once per mount. Only a 401 means "signed out";
 // a 5xx or a network failure says nothing about the session, so it gets a retry, not /login.
@@ -28,7 +28,7 @@ export default function RequireAuth({ role }: { role?: PublicUser["role"] }) {
 					setCheck(
 						err instanceof ApiError && err.status === 401
 							? "done"
-							: "failed"
+							: { failed: errorMessage(err) }
 					);
 			});
 		return () => {
@@ -36,10 +36,10 @@ export default function RequireAuth({ role }: { role?: PublicUser["role"] }) {
 		};
 	}, [attempt]);
 
-	if (!user && check === "failed") {
+	if (!user && typeof check === "object") {
 		return (
 			<div className="flex min-h-svh flex-col items-center justify-center gap-3 bg-canvas text-sm text-text-muted">
-				<p role="alert">Can&apos;t reach the server right now.</p>
+				<p role="alert">{check.failed}</p>
 				<button
 					type="button"
 					className={`${authButton} !w-auto px-4`}

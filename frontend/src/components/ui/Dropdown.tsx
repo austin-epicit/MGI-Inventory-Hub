@@ -54,8 +54,10 @@ const Dropdown = ({
 		"outline-none",
 		"focus:ring-0",
 		"pr-8",
-		"rounded",
-		disabled && "cursor-not-allowed opacity-60",
+		"rounded-md",
+		"[[data-theme=dark]_&]:[color-scheme:dark]",
+		"[[data-theme=light]_&]:[color-scheme:light]",
+		disabled && "cursor-not-allowed",
 		error && "text-error-text",
 		"[&>option]:text-text-primary",
 		"[&>option]:bg-base",
@@ -67,13 +69,13 @@ const Dropdown = ({
 	const wrapperClasses = [
 		"relative",
 		"w-full",
-		"h-[34px]",
+		"h-9",
 		"border",
 		error ? "border-error" : "border-border",
-		"rounded",
+		"rounded-md",
 		"bg-base",
 		"overflow-hidden",
-		disabled && "opacity-60",
+		disabled && "opacity-40",
 		"transition-colors",
 		!disabled && !error && "hover:border-border-strong",
 		!disabled && !error && "focus-within:border-primary",
@@ -89,7 +91,6 @@ const Dropdown = ({
 		"pointer-events-none",
 		"text-text-secondary",
 		"transition-opacity",
-		disabled && "opacity-40",
 	]
 		.filter(Boolean)
 		.join(" ");

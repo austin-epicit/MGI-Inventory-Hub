@@ -12,6 +12,9 @@ interface BaseProps {
 	allLabel?: string;
 	placeholder?: string;
 	hideAll?: boolean;
+	// The options failed to load: say so inside the list, with a way to ask again.
+	loadError?: boolean;
+	onRetryOptions?: () => void;
 }
 
 interface StatusFilterUrlProps extends BaseProps {
@@ -56,6 +59,8 @@ export function DropdownFilter({
 	placeholder = "Status",
 	hideAll = false,
 	exclusive = false,
+	loadError = false,
+	onRetryOptions,
 }: StatusFilterControlledProps) {
 	const [open, setOpen] = useState(false);
 	const containerRef = useRef<HTMLDivElement>(null);
@@ -170,6 +175,22 @@ export function DropdownFilter({
 								</button>
 								<div className="border-t border-border my-1 -mx-1" />
 							</>
+						)}
+						{loadError && (
+							<div className="flex items-center justify-between gap-3 px-3 py-1.5 text-sm text-text-muted">
+								<span>Couldn't load options.</span>
+								{onRetryOptions && (
+									<button
+										type="button"
+										onClick={
+											onRetryOptions
+										}
+										className="font-medium text-text-link hover:underline"
+									>
+										Try again
+									</button>
+								)}
+							</div>
 						)}
 						{options.map((option) => (
 							<button

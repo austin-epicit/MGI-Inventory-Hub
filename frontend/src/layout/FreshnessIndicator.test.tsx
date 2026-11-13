@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, render, screen } from "../test/testUtils";
 import type { SyncStatus } from "../features/settings/api";
 import { useAuth } from "../auth/store";
+import { ApiError } from "../lib/api";
 import FreshnessIndicator from "./FreshnessIndicator";
 import { computeFreshness } from "./freshness";
 
@@ -138,7 +139,7 @@ describe("computeFreshness", () => {
 		expect(computeFreshness(status({ lastRun }), NOW)).toEqual({
 			tone: "error",
 			label: "Sync failing",
-			detail: "Cin7 rejected the saved credentials",
+			detail: "Cin7 rejected the saved credentials.",
 		});
 	});
 
@@ -196,7 +197,7 @@ describe("FreshnessIndicator", () => {
 		});
 		rerender(<FreshnessIndicator />);
 		expect(screen.getByText("Sync failing")).toBeInTheDocument();
-		expect(screen.getByText(/Cin7 could not be reached/)).toBeInTheDocument();
+		expect(screen.getByText(/Couldn't reach Cin7\./)).toBeInTheDocument();
 		expect(tone()).toBe("error");
 	});
 
@@ -222,13 +223,17 @@ describe("FreshnessIndicator", () => {
 
 	it("shows an amber Status unavailable, with the reason, when the status query fails", () => {
 		hook.data = undefined;
-		hook.error = new Error("Request failed (503)");
+		hook.error = new ApiError(
+			503,
+			"SERVER_UNAVAILABLE",
+			"The server isn't responding. Try again in a moment."
+		);
 		render(<FreshnessIndicator />);
 		expect(screen.getByText("Status unavailable")).toBeInTheDocument();
 		expect(tone()).toBe("warning");
 		expect(document.querySelector("[data-tone]")).toHaveAttribute(
 			"title",
-			"Request failed (503)"
+			"The server isn't responding. Try again in a moment."
 		);
 	});
 

@@ -124,7 +124,7 @@ export const createSettingsRoutes = (deps: Deps, requireAuth: RequestHandler): R
 					throw httpError(
 						502,
 						"CIN7_UNREACHABLE",
-						"Could not reach Cin7. Check the connection and try again"
+						"Couldn't reach Cin7. Check the connection and try again."
 					);
 				throw e;
 			}

@@ -11,21 +11,15 @@ import PageHeader from "../../components/ui/PageHeader";
 import SegmentedToggle from "../../components/ui/SegmentedToggle";
 import Thumb from "../../components/ui/Thumb";
 import { useToast } from "../../hooks/useToast";
-import { ApiError } from "../../lib/api";
-import { formatDate, formatMoney, formatQty } from "../../lib/format";
+import { errorMessage, isTransportError } from "../../lib/api";
+import { formatDate, formatMoney, formatPercent, formatQty, plural } from "../../lib/format";
 import type { CostAlert, SlowAlert } from "./api";
 import { useAlerts, useDismissAlert, useRestoreAlert } from "./hooks";
 
-const TH_BASE = "px-2 py-1.5 font-medium text-text-muted whitespace-nowrap";
+const TH_BASE = "px-2 py-1.5 text-xs font-medium text-text-tertiary whitespace-nowrap";
 const TH = `${TH_BASE} text-right`;
 const TH_LEFT = `${TH_BASE} text-left`;
 const TD = "px-2 py-1.5 text-right tabular-nums whitespace-nowrap";
-
-// A real minus sign so the figure lines up with the "+" and reads as a number, not a hyphen.
-const formatSignedPct = (pct: number): string => {
-	const sign = pct > 0 ? "+" : pct < 0 ? "−" : "";
-	return `${sign}${Math.abs(pct).toFixed(1)}%`;
-};
 
 function ProductCell({
 	productId,
@@ -44,7 +38,7 @@ function ProductCell({
 			<div className="min-w-0 leading-tight">
 				<Link
 					to={`/products/${productId}`}
-					className="line-clamp-2 break-words text-primary-text hover:underline"
+					className="line-clamp-2 break-words text-text-link hover:underline"
 					title={name}
 				>
 					{name}
@@ -66,9 +60,9 @@ function RowAction({ alertKey, dismissed }: { alertKey: string; dismissed: boole
 		m.mutate(alertKey, {
 			onError: (err) =>
 				toast.error(
-					err instanceof ApiError && err.status !== 400
-						? `Could not ${dismissed ? "restore" : "dismiss"} this alert. Try again.`
-						: "Could not reach the server. Try again."
+					isTransportError(err)
+						? errorMessage(err)
+						: `Couldn't ${dismissed ? "restore" : "dismiss"} this alert.`
 				),
 		});
 	return (
@@ -91,7 +85,7 @@ function Footer({ rule }: { rule: string }) {
 			{isAdmin && (
 				<Link
 					to="/settings#alerts-settings"
-					className="ml-2 text-primary-text hover:underline"
+					className="ml-2 text-text-link hover:underline"
 				>
 					Change thresholds
 				</Link>
@@ -158,11 +152,13 @@ function CostRow({ r }: { r: CostAlert }) {
 					detail={r.sku}
 				/>
 			</td>
-			<td className="px-2 py-1.5 text-left whitespace-nowrap">
-				<span className="block">{r.supplierName}</span>
+			<td className="max-w-[200px] px-2 py-1.5 text-left">
+				<span className="block truncate" title={r.supplierName}>
+					{r.supplierName}
+				</span>
 				<Link
 					to={`/purchases/${r.purchaseId}`}
-					className="text-xs text-primary-text hover:underline"
+					className="text-xs text-text-link hover:underline"
 				>
 					{r.orderNumber}
 				</Link>
@@ -174,7 +170,9 @@ function CostRow({ r }: { r: CostAlert }) {
 			<td className={TD}>
 				{formatMoney(r.previousCost)} → {formatMoney(r.latestCost)}
 			</td>
-			<td className={`${TD} font-medium`}>{formatSignedPct(r.changePct)}</td>
+			<td className={`${TD} font-medium`}>
+				{formatPercent(r.changePct, { signed: true })}
+			</td>
 			<td className="px-2 py-1.5 text-right">
 				<RowAction alertKey={r.key} dismissed={r.dismissed} />
 			</td>
@@ -185,8 +183,8 @@ function CostRow({ r }: { r: CostAlert }) {
 const slowDetail = (r: SlowAlert): string =>
 	`${r.sku} · ${formatQty(r.onHand)} on hand · ${
 		r.lastSold
-			? `last sold ${formatDate(r.lastSold)} (${r.daysSinceSale ?? 0} days ago)`
-			: "Never sold"
+			? `last sold ${formatDate(r.lastSold)} (${r.daysSinceSale ?? 0} ${plural(r.daysSinceSale ?? 0, "day")} ago)`
+			: "never sold"
 	}`;
 
 function SlowRow({ r }: { r: SlowAlert }) {
@@ -242,14 +240,14 @@ export default function AlertsPage() {
 					rows={cost.length}
 					empty={
 						allDismissed(data.costChanges, cost) ??
-						`No product's last purchase cost moved ${t.costChangePct}% or more in the last ${t.costChangeDays} days.`
+						`No product's last purchase cost moved ${formatQty(t.costChangePct)}% or more in the last ${t.costChangeDays} ${plural(t.costChangeDays, "day")}.`
 					}
-					rule={`Last purchase cost vs the one before, ±${t.costChangePct}% or more, bought in the last ${t.costChangeDays} days.`}
+					rule={`Last purchase cost vs the one before, ±${formatQty(t.costChangePct)}% or more, bought in the last ${t.costChangeDays} ${plural(t.costChangeDays, "day")}.`}
 					head={
 						<>
 							<th className={TH_LEFT}>Product</th>
 							<th className={TH_LEFT}>Supplier</th>
-							<th className={TH}>Unit cost</th>
+							<th className={TH}>Purchase cost</th>
 							<th className={TH}>Change</th>
 							<ActionHead />
 						</>
@@ -264,9 +262,9 @@ export default function AlertsPage() {
 					rows={slow.length}
 					empty={
 						allDismissed(data.slowMovers, slow) ??
-						`No product worth ${formatMoney(t.slowMoverMinValue)} or more has gone ${t.slowMoverDays} days without a sale.`
+						`No product worth ${formatMoney(t.slowMoverMinValue)} or more has gone ${t.slowMoverDays} ${plural(t.slowMoverDays, "day")} without a sale.`
 					}
-					rule={`In stock, no sale in ${t.slowMoverDays} days, stock value ${formatMoney(t.slowMoverMinValue)} or more.`}
+					rule={`In stock, no sale in ${t.slowMoverDays} ${plural(t.slowMoverDays, "day")}, stock value ${formatMoney(t.slowMoverMinValue)} or more.`}
 					head={
 						<>
 							<th className={TH_LEFT}>Product</th>

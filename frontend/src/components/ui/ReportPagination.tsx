@@ -1,5 +1,6 @@
 import { ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import Dropdown from "../ui/Dropdown";
+import { formatCount } from "../../lib/format";
 
 interface ReportPaginationProps {
 	page: number;
@@ -31,8 +32,8 @@ export default function ReportPagination({
 	return (
 		<div className="flex items-center justify-between gap-3 pt-3 text-sm text-text-muted">
 			<span className="flex items-center gap-2 tabular-nums">
-				Showing {firstRow.toLocaleString()}–{lastRow.toLocaleString()} of{" "}
-				{total.toLocaleString()}
+				Showing {formatCount(firstRow)}–{formatCount(lastRow)} of{" "}
+				{formatCount(total)}
 				{isFetching && <Loader2 size={14} className="animate-spin" />}
 			</span>
 			<div className="flex items-center gap-3">
@@ -61,8 +62,7 @@ export default function ReportPagination({
 					</label>
 				)}
 				<span className="tabular-nums">
-					Page {(page + 1).toLocaleString()} of{" "}
-					{pageCount.toLocaleString()}
+					Page {formatCount(page + 1)} of {formatCount(pageCount)}
 				</span>
 				<div className="flex items-center gap-1">
 					<button

@@ -68,19 +68,25 @@ type SlowRow = {
 	days_since_sale: number | null;
 };
 
-// Latest vs previous counted purchase line per product, same ordering as the product's "last
-// purchase". A zero previous cost is skipped (no meaningful percentage).
+// Latest vs previous counted purchase per product (a purchase's cost is its quantity-weighted line
+// cost), same ordering as the product's "last purchase". A zero previous cost is skipped (no
+// meaningful percentage). The key uses the purchase's last line_no, as the line ranking did.
 const costRows = (db: Db, today: string, t: AlertThresholds) =>
 	db.$queryRaw<CostRow[]>`
-		WITH ranked AS (
-			SELECT l.product_id, l.purchase_id, l.line_no, l.unit_cost_base,
-				o.order_date, o.order_number, o.supplier_name,
-				row_number() OVER (
-					PARTITION BY l.product_id
-					ORDER BY o.order_date DESC, o.order_number DESC, l.line_no DESC
-				) AS rn
+		WITH per_purchase AS (
+			SELECT l.product_id, l.purchase_id, max(l.line_no) AS line_no,
+				CASE WHEN sum(l.quantity) > 0 THEN sum(l.quantity * l.unit_cost_base) / sum(l.quantity)
+					ELSE avg(l.unit_cost_base) END AS unit_cost_base,
+				o.order_date, o.order_number, o.supplier_name
 			FROM purchase_line l JOIN purchase o ON o.id = l.purchase_id
 			WHERE o.counted AND l.product_id IS NOT NULL AND o.order_date IS NOT NULL
+			GROUP BY l.product_id, l.purchase_id, o.order_date, o.order_number, o.supplier_name
+		), ranked AS (
+			SELECT *, row_number() OVER (
+				PARTITION BY product_id
+				ORDER BY order_date DESC, order_number DESC, line_no DESC
+			) AS rn
+			FROM per_purchase
 		)
 		SELECT p.id::text AS product_id, p.sku, p.name, a.purchase_id::text AS purchase_id,
 			a.line_no, a.order_number, a.supplier_name, a.order_date,

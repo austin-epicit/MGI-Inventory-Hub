@@ -1,0 +1,10 @@
+# Overlay: points the local api at the fake Cin7 server instead of demo data.
+# docker compose -f docker-compose.yml -f docker-compose.fake.yml --profile fake up -d
+services:
+  api:
+    environment:
+      NODE_ENV: development
+      CIN7_SOURCE: http
+      CIN7_BASE_URL: http://fake-cin7:4010/ExternalApi/v2/
+    depends_on:
+      - fake-cin7

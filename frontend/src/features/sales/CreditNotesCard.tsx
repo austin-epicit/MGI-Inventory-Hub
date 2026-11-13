@@ -3,7 +3,7 @@ import OrderStatusPill from "../../components/ui/OrderStatusPill";
 import { formatDate, formatMoney, formatQty } from "../../lib/format";
 import type { SaleCreditNote } from "./api";
 
-const TH = "px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wider text-text-muted";
+const TH = "px-3 py-2 text-left text-xs font-medium text-text-tertiary";
 const TD = "px-3 py-2 whitespace-nowrap";
 const NUM = "text-right tabular-nums";
 
@@ -21,12 +21,12 @@ export default function CreditNotesCard({
 				<table aria-label="Credit notes" className="w-full text-[13px]">
 					<thead className="border-b border-border-subtle">
 						<tr>
-							<th className={TH}>Number</th>
-							<th className={TH}>Date</th>
+							<th className={TH}>Number / SKU</th>
+							<th className={TH}>Date / Item</th>
 							<th className={TH}>Status</th>
 							<th className={`${TH} text-right`}>Qty</th>
 							<th className={`${TH} text-right`}>
-								Price
+								Sold price
 							</th>
 							<th className={`${TH} text-right`}>
 								Total

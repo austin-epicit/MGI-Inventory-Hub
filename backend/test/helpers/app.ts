@@ -58,6 +58,13 @@ export const testApp = (overrides: Partial<AppDeps> = {}): Express =>
 			api.get("/_test/conflict", () => {
 				throw httpError(409, "CONFLICT", "x");
 			});
+			api.get("/_test/bad-gateway", () => {
+				throw httpError(
+					502,
+					"UPSTREAM_DOWN",
+					"Couldn't reach the thing. Try again."
+				);
+			});
 			api.get("/_test/boom", () => {
 				throw new Error("secret detail");
 			});

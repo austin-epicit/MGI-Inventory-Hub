@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi, type MockInstance } from "vitest";
+import { clickExport } from "../../test/clickExport";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -104,7 +105,7 @@ describe("PurchasesPage", () => {
 		render(<PurchasesPage />);
 		await screen.findByText("PO-0042");
 		const user = userEvent.setup();
-		await user.click(screen.getByRole("button", { name: /^Status/ }));
+		await user.click(screen.getByRole("button", { name: /^Status/, expanded: false }));
 		expect(
 			await screen.findByRole("option", { name: "Partially received" })
 		).toBeInTheDocument();
@@ -117,7 +118,9 @@ describe("PurchasesPage", () => {
 		render(<PurchasesPage />);
 		await screen.findByText("PO-0042");
 		const user = userEvent.setup();
-		await user.click(screen.getByRole("button", { name: /^Supplier/ }));
+		await user.click(
+			screen.getByRole("button", { name: /^Supplier/, expanded: false })
+		);
 		await user.click(await screen.findByRole("option", { name: "Acme Supply" }));
 		await waitFor(() => expect(listCalls().at(-1)!.get("supplierId")).toBe("s1"));
 		await user.type(screen.getByPlaceholderText(/Search by order number/), "acme");
@@ -129,7 +132,7 @@ describe("PurchasesPage", () => {
 		render(<PurchasesPage />);
 		await screen.findByText("PO-0042");
 		const user = userEvent.setup();
-		await user.click(screen.getByRole("columnheader", { name: /Total/ }));
+		await user.click(screen.getByRole("button", { name: /Total/ }));
 		await waitFor(() => expect(listCalls().at(-1)!.get("sort")).toBe("totalBase"));
 		await user.click(screen.getByRole("button", { name: /Order date/ }));
 		await user.click(screen.getByRole("option", { name: "Today" }));
@@ -191,19 +194,58 @@ describe("PurchasesPage", () => {
 	});
 });
 
+describe("PurchasesPage facet failures", () => {
+	afterEach(() => window.history.replaceState(null, "", "/"));
+
+	it("says the supplier name couldn't load, and Try again refetches the options", async () => {
+		rows = [row()];
+		window.history.replaceState(null, "", "/purchases?supplierId=s1");
+		let down = true;
+		fetchSpy.mockImplementation(async (url) => {
+			if (String(url).startsWith("/api/purchases/facets"))
+				return down
+					? new Response("<html>bad gateway</html>", { status: 502 })
+					: reply({
+							statuses: ["VOIDED"],
+							suppliers: [
+								{ id: "s1", name: "Acme Supply" },
+							],
+						});
+			return reply(rows, rows.length);
+		});
+		render(<PurchasesPage />);
+		expect(
+			await screen.findByText("Supplier: (couldn't load name)")
+		).toBeInTheDocument();
+		expect(screen.queryByText("Supplier: …")).toBeNull();
+		const user = userEvent.setup();
+		await user.click(
+			screen.getByRole("button", { name: /^Supplier/, expanded: false })
+		);
+		const list = screen.getByRole("listbox", { name: "Supplier" });
+		expect(within(list).getByText("Couldn't load options.")).toBeInTheDocument();
+		down = false;
+		await user.click(within(list).getByRole("button", { name: "Try again" }));
+		expect(
+			(await screen.findAllByText("Supplier: Acme Supply")).length
+		).toBeGreaterThan(0);
+	});
+});
+
 describe("PurchasesPage export", () => {
-	it("links the server export with supplier and status, and no paging", async () => {
+	it("requests the server export with supplier and status, and no paging", async () => {
 		rows = [row()];
 		render(<PurchasesPage />);
 		await screen.findByText("PO-0042");
 		const user = userEvent.setup();
-		await user.click(screen.getByRole("button", { name: /^Supplier/ }));
+		await user.click(
+			screen.getByRole("button", { name: /^Supplier/, expanded: false })
+		);
 		await user.click(await screen.findByRole("option", { name: "Acme Supply" }));
-		await user.click(screen.getByRole("button", { name: /^Status/ }));
+		await user.click(screen.getByRole("button", { name: /^Status/, expanded: false }));
 		await user.click(await screen.findByRole("option", { name: "Voided" }));
 		await waitFor(() => expect(listCalls().at(-1)!.get("status")).toBe("VOIDED"));
-		const link = await screen.findByRole("link", { name: "Export CSV" });
-		const url = new URL(link.getAttribute("href")!, "http://x");
+		const url = await clickExport(fetchSpy);
 		expect(url.pathname).toBe("/api/purchases/export.csv");
 		expect(url.searchParams.get("supplierId")).toBe("s1");
 		expect(url.searchParams.get("status")).toBe("VOIDED");
@@ -219,8 +261,7 @@ describe("PurchasesPage export", () => {
 		await user.click(screen.getByRole("button", { name: /Order date/ }));
 		await user.click(await screen.findByText("Last 7 days"));
 		await waitFor(() => expect(listCalls().at(-1)!.get("from")).toBeTruthy());
-		const link = await screen.findByRole("link", { name: "Export CSV" });
-		const url = new URL(link.getAttribute("href")!, "http://x");
+		const url = await clickExport(fetchSpy);
 		expect(url.searchParams.get("from")).toBe(listCalls().at(-1)!.get("from"));
 		expect(url.searchParams.get("to")).toBe(listCalls().at(-1)!.get("to"));
 	});

@@ -93,7 +93,7 @@ describe("WebhooksCard", () => {
 		render(<WebhooksCard />);
 		const user = userEvent.setup();
 		expect(
-			await screen.findByText("Could not check the Cin7 connection.")
+			await screen.findByText("Couldn't check the Cin7 connection.")
 		).toBeInTheDocument();
 		expect(screen.queryByText(/Connect Cin7/)).not.toBeInTheDocument();
 		expect(screen.getByRole("button", { name: "Register webhooks" })).toHaveAttribute(
@@ -106,7 +106,7 @@ describe("WebhooksCard", () => {
 			await screen.findByRole("button", { name: "Register webhooks" })
 		).toBeEnabled();
 		expect(
-			screen.queryByText("Could not check the Cin7 connection.")
+			screen.queryByText("Couldn't check the Cin7 connection.")
 		).not.toBeInTheDocument();
 	});
 

@@ -20,7 +20,7 @@ MGI Inventory Hub: a standalone internal app mirroring an IT-equipment reseller'
 - Cin7 business dates (`OrderDate`, `InvoiceDate`) are `@db.Date`, serialized `"YYYY-MM-DD"`, never time-zone shifted. Other timestamps `timestamptz`, ISO UTC.
 - Time zone and base currency come from Cin7 `GET /me`, cached in `app_setting`; `APP_TIMEZONE` is the fallback.
 - A tier price of 0 means "not set". Voided/draft orders stay listed but never feed charts or KPIs. Foreign-currency orders plot in base currency. A failed sync keeps the last good data.
-- Price vocabulary: **Purchase cost**, **Average cost**, **List price - <tier>**, **Sold price - <tier>**.
+- Price vocabulary: **Purchase cost**, **Average cost**, **List price — <tier>**, **Sold price — <tier>**.
 - Every operating action has a UI path; env values are one-time deploy config only.
 - UI: dark zinc base, blue `#3b82f6` primary, red only for destructive/error, Inter 400-700, motion <= 200 ms ease-out, dense tables. Load the `dataviz` skill before chart code.
 

@@ -1,11 +1,19 @@
 import React, { Fragment, useState } from "react";
-import { flexRender, getCoreRowModel, useReactTable, type ColumnDef } from "@tanstack/react-table";
-import { camelCaseToRegular, formatter } from "../../lib/format";
+import {
+	flexRender,
+	getCoreRowModel,
+	useReactTable,
+	type ColumnDef,
+	type Header,
+} from "@tanstack/react-table";
+import { camelCaseToRegular, formatQty, formatter } from "../../lib/format";
 import LoadSvg from "../../assets/icons/loading.svg?react";
 import BoxSvg from "../../assets/icons/box.svg?react";
-import ErrSvg from "../../assets/icons/error.svg?react";
 import type { SortDir } from "../../util/sortUtil";
-import { ArrowUpDown, ChevronDown, ChevronRight, ChevronUp } from "lucide-react";
+import { ArrowUpDown, ChevronDown, ChevronRight, ChevronUp, SlidersHorizontal } from "lucide-react";
+import { ApiError } from "../../lib/api";
+import { QueryErrorState } from "../charts/chartShared";
+import EmptyState from "./EmptyState";
 
 interface AdaptableTableProps {
 	data: Array<Record<string, unknown>>;
@@ -13,6 +21,11 @@ interface AdaptableTableProps {
 	formatNums?: boolean;
 	loadListener?: boolean;
 	errListener?: Error | null;
+	// Lowercase noun phrase for the failure heading: "products".
+	errorWhat: string;
+	onRetry?: () => void;
+	// Offered instead of a retry when the server rejects the filters themselves (400).
+	onClearFilters?: () => void;
 	onRowClick?: (row: Record<string, unknown>) => void;
 	actionColumn?: {
 		header: string;
@@ -82,9 +95,12 @@ const IGNORED_HEADERS: Record<string, boolean> = {
 const AdaptableTable = ({
 	data,
 	borderColor,
-	formatNums = true,
+	formatNums = false,
 	loadListener,
 	errListener,
+	errorWhat,
+	onRetry,
+	onClearFilters,
 	onRowClick,
 	actionColumn,
 	columnVisibility,
@@ -146,22 +162,25 @@ const AdaptableTable = ({
 	if (!borderColor) borderColor = " border-border-subtle ";
 
 	if (errListener) {
-		return (
-			<div className="w-full h-[150px] flex flex-col justify-center content-center">
-				<div>
-					<ErrSvg className="m-auto mb-1 w-15 h-15" />
-
-					<h1 className="m-auto text-center text-xl mt-1">
-						An error has occurred.
-					</h1>
-
-					{/* this should be taken out in prod, just for debug purposes */}
-					<h2 className="m-auto text-center text-text-muted">
-						{errListener.message}
-					</h2>
-				</div>
-			</div>
-		);
+		// Retrying a rejected filter set can't succeed; clearing it can.
+		if (errListener instanceof ApiError && errListener.status === 400) {
+			return (
+				<EmptyState
+					icon={<SlidersHorizontal size={26} />}
+					title="Some filters aren't valid."
+					description="Clear them to see the full list again."
+					action={
+						onClearFilters
+							? {
+									label: "Clear filters",
+									onClick: onClearFilters,
+								}
+							: undefined
+					}
+				/>
+			);
+		}
+		return <QueryErrorState what={errorWhat} onRetry={onRetry} />;
 	}
 
 	if (data.length == 0 && !loadListener) {
@@ -186,6 +205,14 @@ const AdaptableTable = ({
 			? `right-0 z-[1] border-l border-border-subtle bg-base ${hoverable ? "group-hover/row:bg-surface-raised transition-colors" : ""}`
 			: "";
 
+	const headerContent = (header: Header<Record<string, unknown>, unknown>) =>
+		flexRender(
+			typeof header.column.columnDef.header === "string"
+				? camelCaseToRegular(header.column.columnDef.header)
+				: header.column.columnDef.header,
+			header.getContext()
+		);
+
 	return (
 		<>
 			{loadListener ? (
@@ -194,7 +221,7 @@ const AdaptableTable = ({
 						<LoadSvg className="m-auto mb-3 w-12 h-12" />
 
 						<h1 className="m-auto text-center text-xl mt-3">
-							Please wait...
+							Loading…
 						</h1>
 					</div>
 				</div>
@@ -209,77 +236,81 @@ const AdaptableTable = ({
 											key={
 												header.id
 											}
-											onClick={() => {
-												if (
-													onSortChange &&
-													sortable(
-														header
-															.column
-															.id
-													)
+											aria-sort={
+												sortable(
+													header
+														.column
+														.id
 												)
-													onSortChange(
+													? sortKey ===
 														header
 															.column
 															.id
-													);
-											}}
-											className={`${sortable(header.column.id) ? "cursor-pointer select-none" : ""} sticky top-0 border-b font-bold text-text-tertiary whitespace-nowrap ${borderColor} ${PADDING} ${alignClass(header.column.id)} ${stickyCell(header.column.id, false)}`}
+														? sortDir ===
+															"asc"
+															? "ascending"
+															: "descending"
+														: "none"
+													: undefined
+											}
+											className={`sticky top-0 border-b text-xs font-medium text-text-tertiary whitespace-nowrap ${borderColor} ${PADDING} ${alignClass(header.column.id)} ${stickyCell(header.column.id, false)}`}
 										>
-											{flexRender(
-												typeof header
-													.column
-													.columnDef
-													.header ===
-													"string"
-													? camelCaseToRegular(
-															header
-																.column
-																.columnDef
-																.header
-														)
-													: header
-															.column
-															.columnDef
-															.header,
-												header.getContext()
-											)}
 											{sortable(
 												header
 													.column
 													.id
-											) && (
-												<span
-													className="ml-1 inline-flex"
-													aria-label="Sort"
-												>
-													{sortKey ===
-													header
-														.column
-														.id ? (
-														sortDir ===
-														"asc" ? (
-															<ChevronUp
-																size={
-																	12
-																}
-															/>
-														) : (
-															<ChevronDown
-																size={
-																	12
-																}
-															/>
+											) &&
+											onSortChange ? (
+												<button
+													type="button"
+													onClick={() =>
+														onSortChange(
+															header
+																.column
+																.id
 														)
-													) : (
-														<ArrowUpDown
-															size={
-																12
-															}
-															className="text-text-faint"
-														/>
+													}
+													className="inline-flex cursor-pointer select-none items-center font-[inherit] hover:text-text-primary"
+												>
+													{headerContent(
+														header
 													)}
-												</span>
+													<span
+														className="ml-1 inline-flex"
+														aria-hidden="true"
+													>
+														{sortKey ===
+														header
+															.column
+															.id ? (
+															sortDir ===
+															"asc" ? (
+																<ChevronUp
+																	size={
+																		12
+																	}
+																/>
+															) : (
+																<ChevronDown
+																	size={
+																		12
+																	}
+																/>
+															)
+														) : (
+															<ArrowUpDown
+																size={
+																	12
+																}
+																className="text-text-faint"
+															/>
+														)}
+													</span>
+												</button>
+											) : (
+												headerContent(
+													header
+												)
 											)}
 										</th>
 									)
@@ -365,7 +396,9 @@ const AdaptableTable = ({
 																? formatter.format(
 																		rawValue
 																	)
-																: rawValue.toLocaleString();
+																: formatQty(
+																		rawValue
+																	);
 
 														return flexRender(
 															cell

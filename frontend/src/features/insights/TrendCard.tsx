@@ -16,7 +16,7 @@ import { CHART_GRID, CHART_TICK, PERIOD_X_AXIS } from "../../components/charts/c
 import { ChartChip, ChartTooltipShell, QueryErrorState } from "../../components/charts/chartShared";
 import Card from "../../components/ui/Card";
 import EmptyState from "../../components/ui/EmptyState";
-import { formatMoney, formatMoneyCompact } from "../../lib/format";
+import { formatMoney, formatMoneyCompact, formatPercent } from "../../lib/format";
 import type { PriceRange } from "../../types/priceHistory";
 import type { InsightsTrend, InsightsTrendPoint } from "./api";
 import { useInsightsTrend } from "./hooks";
@@ -32,7 +32,7 @@ const SYNC_ID = "insights-trend";
 // with only a cap, each bar sits centred in its own half-band and the pair drifts apart.
 const BAR_SIZE = 28;
 
-const pct = (n: number | null) => (n == null ? "—" : `${n.toFixed(1)}%`);
+const pct = (n: number | null) => (n == null ? "—" : formatPercent(n));
 
 function Swatch({ color }: { color: string }) {
 	return (
@@ -154,7 +154,13 @@ function TrendPlots({ trend }: { trend: InsightsTrend }) {
 							tick={CHART_TICK}
 							width={Y_WIDTH}
 							tickCount={3}
-							tickFormatter={(v: number) => `${v}%`}
+							tickFormatter={(v: number) =>
+								formatPercent(v, {
+									dp: Number.isInteger(v)
+										? 0
+										: 1,
+								})
+							}
 						/>
 						{/* The bar chart above shows the synced tooltip; this one only draws the cursor. */}
 						<Tooltip

@@ -61,6 +61,7 @@ export default function ToastViewport({ inset = "default" }: { inset?: "default"
 				return (
 					<div
 						key={toast.id}
+						role={toast.kind === "error" ? "alert" : undefined}
 						className={`bg-surface border rounded-lg shadow-lg px-4 py-3 flex gap-3 transition duration-200 ease-out starting:opacity-0 starting:translate-y-2 motion-reduce:transition-none ${
 							toast.leaving
 								? "opacity-0 translate-x-4"

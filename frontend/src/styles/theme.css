@@ -29,6 +29,9 @@
 	--color-primary-border: rgba(59, 130, 246, 0.2);
 	--color-primary-text: #1d4ed8;
 	--color-on-primary: #ffffff;
+	/* Fill for buttons carrying white text: #2563eb is 5.17:1, hover #1d4ed8 is 6.70:1 (primary itself is 3.68:1) */
+	--color-primary-fill: #2563eb;
+	--color-primary-fill-hover: #1d4ed8;
 	--color-primary-disabled: #1e40af;
 
 	/* ── Borders ─────────────────────────────────────────────────────────── */

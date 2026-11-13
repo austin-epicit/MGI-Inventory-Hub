@@ -83,7 +83,7 @@ export default function SegmentedToggle<T extends string>({
 								: "rounded-[5px]"
 					} transition-colors ${
 						value === o.id
-							? "bg-primary-hover text-on-primary"
+							? "bg-primary-fill text-on-primary"
 							: o.disabled
 								? "text-text-faint cursor-not-allowed"
 								: "text-text-muted hover:text-text-secondary hover:bg-surface cursor-pointer"

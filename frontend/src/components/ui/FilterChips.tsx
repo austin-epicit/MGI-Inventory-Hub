@@ -1,4 +1,5 @@
 import { X } from "lucide-react";
+import { formatCount, plural } from "../../lib/format";
 
 export type ChipColor = "purple" | "blue" | "green" | "orange" | "cyan" | "rose";
 
@@ -95,15 +96,15 @@ export default function FilterChips({
 						);
 					})}
 					<span className="text-sm text-text-muted">
-						• {resultCount}{" "}
-						{resultCount === 1 ? "result" : "results"}
+						• {formatCount(resultCount)}{" "}
+						{plural(resultCount, "result")}
 					</span>
 				</div>
 				<button
 					onClick={onClearAll}
-					className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-error-text hover:text-error-text hover:bg-surface-raised/50 rounded-md transition-colors"
+					className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-text-tertiary hover:text-text-primary rounded-md transition-colors"
 				>
-					Clear All
+					Clear all
 					<X size={14} />
 				</button>
 			</div>

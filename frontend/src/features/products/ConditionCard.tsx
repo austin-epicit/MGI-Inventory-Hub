@@ -3,7 +3,8 @@ import Card from "../../components/ui/Card";
 import Dropdown from "../../components/ui/Dropdown";
 import { HEADER_BTN_PRIMARY, HEADER_BTN_SECONDARY } from "../../components/ui/headerActions";
 import { useAuth } from "../../auth/store";
-import { formatDateTime } from "../../lib/format";
+import { errorMessage } from "../../lib/api";
+import { formatCount, formatDateTime } from "../../lib/format";
 import type { ProductCondition } from "./api";
 import { CONDITION_GRADES, GRADE_LABELS, NOT_GRADED, type ConditionGrade } from "./condition";
 import GradeBadge from "./GradeBadge";
@@ -75,12 +76,14 @@ function ConditionForm({
 					onChange={(e) => setNotes(e.target.value)}
 				/>
 				<p className="mt-1 text-right text-xs tabular-nums text-text-muted">
-					{notes.length} / {NOTES_MAX}
+					{formatCount(notes.length)} / {formatCount(NOTES_MAX)}
 				</p>
 			</div>
 			{save.error && (
 				<p role="alert" className="text-sm text-error-text">
-					{save.error.message}
+					{errorMessage(save.error, {
+						403: "Only an admin can change the condition.",
+					})}
 				</p>
 			)}
 			<div className="flex justify-end gap-2">

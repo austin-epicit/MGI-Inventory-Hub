@@ -15,7 +15,7 @@ describe("RouteErrorBoundary", () => {
 				<Boom fail />
 			</RouteErrorBoundary>
 		);
-		expect(screen.getByText("This page could not be displayed")).toBeInTheDocument();
+		expect(screen.getByText("This page couldn't be displayed")).toBeInTheDocument();
 		rerender(
 			<RouteErrorBoundary resetKey="/b">
 				<Boom fail={false} />

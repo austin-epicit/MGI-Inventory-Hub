@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Copy } from "lucide-react";
 import Card from "../../components/ui/Card";
 import ConfirmDialog from "../../components/ui/ConfirmDialog";
@@ -6,14 +7,12 @@ import Dropdown from "../../components/ui/Dropdown";
 import { HEADER_BTN_PRIMARY, HEADER_BTN_SECONDARY } from "../../components/ui/headerActions";
 import { useAuth } from "../../auth/store";
 import { useToast } from "../../hooks/useToast";
-import { ApiError } from "../../lib/api";
+import { ApiError, errorMessage } from "../../lib/api";
+import { EMAIL_ERROR, isValidEmail } from "../../lib/validation";
 import type { UserRole } from "../../types/user";
 import type { UserRow } from "./api";
 import { inputClass } from "./ui";
 import { useInviteUser, useResetLink, useUpdateUser, useUsers } from "./hooks";
-
-const message = (err: unknown) =>
-	err instanceof ApiError ? err.message : "Could not reach the server";
 
 function LinkBox({ title, url, onClose }: { title: string; url: string; onClose: () => void }) {
 	const toast = useToast();
@@ -36,7 +35,11 @@ function LinkBox({ title, url, onClose }: { title: string; url: string; onClose:
 					onFocus={(e) => e.currentTarget.select()}
 					className={inputClass}
 				/>
-				<button type="button" className={HEADER_BTN_PRIMARY} onClick={copy}>
+				<button
+					type="button"
+					className={HEADER_BTN_SECONDARY}
+					onClick={copy}
+				>
 					<Copy size={13} />
 					Copy
 				</button>
@@ -63,10 +66,13 @@ export default function UsersCard() {
 	const update = useUpdateUser();
 	const reset = useResetLink();
 	const toast = useToast();
+	const navigate = useNavigate();
 	const [form, setForm] = useState<{ name: string; email: string; role: UserRole } | null>(
 		null
 	);
 	const [error, setError] = useState<string | null>(null);
+	const [fieldError, setFieldError] = useState<{ name?: string; email?: string }>({});
+	const [demoting, setDemoting] = useState<UserRow | null>(null);
 	const [link, setLink] = useState<{ title: string; url: string } | null>(null);
 	const [deactivating, setDeactivating] = useState<UserRow | null>(null);
 
@@ -74,17 +80,36 @@ export default function UsersCard() {
 		e.preventDefault();
 		if (!form) return;
 		setError(null);
+		if (!isValidEmail(form.email)) {
+			setFieldError({ email: EMAIL_ERROR });
+			return;
+		}
+		setFieldError({});
 		try {
 			const out = await invite.mutateAsync(form);
 			setLink({ title: `Invite link for ${form.email}`, url: out.inviteUrl });
 			setForm(null);
 		} catch (err) {
-			setError(message(err));
+			if (
+				err instanceof ApiError &&
+				(err.field === "email" || err.field === "name")
+			)
+				setFieldError({ [err.field]: errorMessage(err) });
+			else setError(errorMessage(err));
 		}
 	};
 
-	const changeRole = (u: UserRow, role: UserRole) =>
-		update.mutate({ id: u.id, role }, { onError: (err) => toast.error(message(err)) });
+	const changeRole = (u: UserRow, role: UserRole) => {
+		if (u.role === "admin" && role === "viewer") {
+			update.reset();
+			setDemoting(u);
+			return;
+		}
+		update.mutate(
+			{ id: u.id, role },
+			{ onError: (err) => toast.error(errorMessage(err)) }
+		);
+	};
 
 	const showReset = (u: UserRow) =>
 		reset.mutate(u.id, {
@@ -93,13 +118,13 @@ export default function UsersCard() {
 					title: `Password reset link for ${u.email}`,
 					url: out.resetUrl,
 				}),
-			onError: (err) => toast.error(message(err)),
+			onError: (err) => toast.error(errorMessage(err)),
 		});
 
 	const reactivate = (u: UserRow) =>
 		update.mutate(
 			{ id: u.id, deactivated: false },
-			{ onError: (err) => toast.error(message(err)) }
+			{ onError: (err) => toast.error(errorMessage(err)) }
 		);
 
 	return (
@@ -109,7 +134,7 @@ export default function UsersCard() {
 				!form && (
 					<button
 						type="button"
-						className={HEADER_BTN_PRIMARY}
+						className={HEADER_BTN_SECONDARY}
 						onClick={() =>
 							setForm({
 								name: "",
@@ -127,36 +152,71 @@ export default function UsersCard() {
 
 			{form && (
 				<form
+					noValidate
 					onSubmit={submitInvite}
 					className="mb-4 grid gap-3 rounded-md border border-border-subtle p-3 sm:grid-cols-[1fr_1fr_auto]"
 				>
-					<label className="text-xs font-medium text-text-secondary">
-						Name
-						<input
-							className={`${inputClass} mt-1`}
-							value={form.name}
-							onChange={(e) =>
-								setForm({
-									...form,
-									name: e.target.value,
-								})
-							}
-						/>
-					</label>
-					<label className="text-xs font-medium text-text-secondary">
-						Email
-						<input
-							type="email"
-							className={`${inputClass} mt-1`}
-							value={form.email}
-							onChange={(e) =>
-								setForm({
-									...form,
-									email: e.target.value,
-								})
-							}
-						/>
-					</label>
+					<div>
+						<label className="block text-xs font-medium text-text-secondary">
+							Name
+							<input
+								className={`${inputClass} mt-1`}
+								maxLength={200}
+								aria-invalid={
+									fieldError.name
+										? true
+										: undefined
+								}
+								value={form.name}
+								onChange={(e) =>
+									setForm({
+										...form,
+										name: e.target
+											.value,
+									})
+								}
+							/>
+						</label>
+						{fieldError.name && (
+							<span
+								role="alert"
+								className="mt-1 block text-xs text-error-text"
+							>
+								{fieldError.name}
+							</span>
+						)}
+					</div>
+					<div>
+						<label className="block text-xs font-medium text-text-secondary">
+							Email
+							<input
+								type="email"
+								className={`${inputClass} mt-1`}
+								maxLength={200}
+								aria-invalid={
+									fieldError.email
+										? true
+										: undefined
+								}
+								value={form.email}
+								onChange={(e) =>
+									setForm({
+										...form,
+										email: e.target
+											.value,
+									})
+								}
+							/>
+						</label>
+						{fieldError.email && (
+							<span
+								role="alert"
+								className="mt-1 block text-xs text-error-text"
+							>
+								{fieldError.email}
+							</span>
+						)}
+					</div>
 					<label className="text-xs font-medium text-text-secondary">
 						Role
 						<div className="mt-1">
@@ -213,6 +273,7 @@ export default function UsersCard() {
 							onClick={() => {
 								setForm(null);
 								setError(null);
+								setFieldError({});
 							}}
 						>
 							Cancel
@@ -225,7 +286,7 @@ export default function UsersCard() {
 				<p className="text-sm text-text-muted">Loading…</p>
 			) : isError || !users ? (
 				<div className="flex items-center gap-3 text-sm text-error-text">
-					<span role="alert">Could not load users.</span>
+					<span role="alert">Couldn't load users.</span>
 					<button
 						type="button"
 						className={HEADER_BTN_SECONDARY}
@@ -243,6 +304,7 @@ export default function UsersCard() {
 						>
 							<div className="min-w-0 flex-1 basis-48">
 								<p
+									title={u.name}
 									className={`truncate text-sm font-medium ${u.deactivated ? "text-text-muted line-through" : "text-text-primary"}`}
 								>
 									{u.name}
@@ -252,7 +314,10 @@ export default function UsersCard() {
 										</span>
 									)}
 								</p>
-								<p className="truncate text-xs text-text-muted">
+								<p
+									className="truncate text-xs text-text-muted"
+									title={u.email}
+								>
 									{u.email}
 									{u.pendingInvite &&
 										" · invite pending"}
@@ -312,6 +377,9 @@ export default function UsersCard() {
 										className={
 											HEADER_BTN_SECONDARY
 										}
+										disabled={
+											update.isPending
+										}
 										onClick={() =>
 											reactivate(
 												u
@@ -320,26 +388,62 @@ export default function UsersCard() {
 									>
 										Reactivate
 									</button>
-								) : (
+								) : u.id !== me?.id ? (
 									<button
 										type="button"
 										className={
 											HEADER_BTN_SECONDARY
 										}
-										onClick={() =>
+										onClick={() => {
+											update.reset();
 											setDeactivating(
 												u
-											)
-										}
+											);
+										}}
 									>
 										Deactivate
 									</button>
-								)}
+								) : null}
 							</div>
 						</li>
 					))}
 				</ul>
 			)}
+
+			<ConfirmDialog
+				open={demoting !== null}
+				title="Change role to Viewer?"
+				tone="destructive"
+				body={
+					demoting?.id === me?.id
+						? "You'll lose access to Settings. Another admin would have to make you an admin again."
+						: `${demoting?.email ?? ""} will lose access to Settings and user management.`
+				}
+				confirmLabel="Change role"
+				pending={update.isPending}
+				error={update.isError ? errorMessage(update.error) : null}
+				onConfirm={async () => {
+					if (!demoting) return;
+					const ok = await update
+						.mutateAsync({ id: demoting.id, role: "viewer" })
+						.then(() => true)
+						.catch(() => false);
+					if (!ok) return;
+					setDemoting(null);
+					// The users query would now 403 for this session, so leave Settings with the new role.
+					if (me && demoting.id === me.id) {
+						useAuth.getState().setUser({
+							...me,
+							role: "viewer",
+						});
+						navigate("/");
+					}
+				}}
+				onCancel={() => {
+					update.reset();
+					setDemoting(null);
+				}}
+			/>
 
 			<ConfirmDialog
 				open={deactivating !== null}
@@ -348,7 +452,7 @@ export default function UsersCard() {
 				body={`${deactivating?.email ?? ""} will be signed out and unable to sign in. You can reactivate them later.`}
 				confirmLabel="Deactivate"
 				pending={update.isPending}
-				error={update.isError ? message(update.error) : null}
+				error={update.isError ? errorMessage(update.error) : null}
 				onConfirm={async () => {
 					if (!deactivating) return;
 					const ok = await update

@@ -3,7 +3,7 @@ import { useToastStore, type PushOptions } from "../stores/toastStore";
 
 export interface ToastApi {
 	success: (message: ReactNode) => void;
-	error: (message: ReactNode) => void;
+	error: (message: ReactNode, options?: PushOptions) => void;
 	warning: (message: ReactNode, options?: PushOptions) => void;
 	info: (message: ReactNode, options?: PushOptions) => void;
 }
@@ -15,8 +15,8 @@ export function useToast(): ToastApi {
 		success: (message) => {
 			push("success", message);
 		},
-		error: (message) => {
-			push("error", message);
+		error: (message, options) => {
+			push("error", message, options);
 		},
 		warning: (message, options) => {
 			push("warning", message, options);

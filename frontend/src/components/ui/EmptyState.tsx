@@ -30,7 +30,7 @@ export default function EmptyState({ title, description, icon, action }: EmptySt
 				<button
 					type="button"
 					onClick={action.onClick}
-					className="mt-4 inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium bg-primary-hover hover:bg-primary-active text-on-primary rounded-md transition-colors"
+					className="mt-4 inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium bg-primary-fill hover:bg-primary-fill-hover text-on-primary rounded-md transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
 				>
 					{action.icon}
 					{action.label}

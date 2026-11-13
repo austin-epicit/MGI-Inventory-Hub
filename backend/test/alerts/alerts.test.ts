@@ -38,6 +38,7 @@ type Payload = {
 let admin: Agent;
 let viewer: Agent;
 const extraPurchases: string[] = [];
+const extraProducts: string[] = [];
 let n = 0;
 
 beforeAll(async () => {
@@ -54,6 +55,7 @@ afterEach(async () => {
 	await testDb.alert_dismissal.deleteMany();
 	await testDb.app_setting.deleteMany({ where: { key: ALERT_THRESHOLDS_KEY } });
 	await testDb.purchase.deleteMany({ where: { id: { in: extraPurchases.splice(0) } } });
+	await testDb.product.deleteMany({ where: { id: { in: extraProducts.splice(0) } } });
 });
 afterAll(() => testDb.$disconnect());
 
@@ -71,11 +73,14 @@ async function latestLine(productId: string) {
 	return rows[0]!;
 }
 
-// A counted purchase with one line for the product, dated `ago` days before TODAY.
-async function buy(productId: string, ago: number, unitCost: number) {
+type Line = { qty: number; cost: number };
+
+// A counted purchase dated `ago` days before TODAY, one line per entry (line_no 1..n).
+async function buyLines(productId: string, ago: number, lines: Line[]) {
 	n += 1;
 	const id = `00000000-0000-4000-8000-${String(900000 + n).padStart(12, "0")}`;
 	extraPurchases.push(id);
+	const total = lines.reduce((sum, l) => sum + l.qty * l.cost, 0);
 	await testDb.purchase.create({
 		data: {
 			id,
@@ -89,24 +94,47 @@ async function buy(productId: string, ago: number, unitCost: number) {
 			currency: "USD",
 			base_currency: "USD",
 			currency_rate: "1",
-			total: String(unitCost),
-			total_base: String(unitCost),
+			total: String(total),
+			total_base: String(total),
 			cin7_updated_at: CLOCK,
 			raw: {},
 			synced_at: CLOCK,
 			lines: {
-				create: {
-					line_no: 1,
+				create: lines.map((l, i) => ({
+					line_no: i + 1,
 					product_id: productId,
 					sku: "X",
 					name: "X",
-					quantity: "1",
-					unit_price: String(unitCost),
+					quantity: String(l.qty),
+					unit_price: String(l.cost),
 					discount_pct: "0",
-					unit_cost_base: String(unitCost),
-					total_base: String(unitCost),
-				},
+					unit_cost_base: String(l.cost),
+					total_base: String(l.qty * l.cost),
+				})),
 			},
+		},
+	});
+	return id;
+}
+
+const buy = (productId: string, ago: number, unitCost: number) =>
+	buyLines(productId, ago, [{ qty: 1, cost: unitCost }]);
+
+// A product with no purchase history, so only the purchases a test adds count.
+async function freshProduct() {
+	const id = `00000000-0000-4000-8000-${String(800000 + n++).padStart(12, "0")}`;
+	extraProducts.push(id);
+	await testDb.product.create({
+		data: {
+			id,
+			sku: `ALERT-${id.slice(-6)}`,
+			name: "Alert fixture",
+			type: "Stock",
+			status: "Active",
+			average_cost: "0",
+			tier_prices: [],
+			raw: {},
+			synced_at: CLOCK,
 		},
 	});
 	return id;
@@ -160,6 +188,44 @@ describe("GET /api/alerts", () => {
 		expect(c.latestCost).toBe(Number(prev.unit_cost_base) * 2);
 		expect(c.previousCost).toBe(Number(prev.unit_cost_base));
 		expect(c.purchaseId).toBe(newId);
+	});
+
+	it("compares purchases: latest PO lines are quantity-weighted", async () => {
+		const pid = await freshProduct();
+		await buy(pid, 5, 100);
+		const latest = await buyLines(pid, 1, [
+			{ qty: 1, cost: 100 },
+			{ qty: 3, cost: 140 },
+		]);
+		const found = (await get(viewer)).costChanges.filter((a) => a.productId === pid);
+		expect(found).toHaveLength(1);
+		expect(found[0]!.changePct).toBe(30);
+		expect(found[0]!.latestCost).toBe(130);
+		expect(found[0]!.previousCost).toBe(100);
+		expect(found[0]!.key).toBe(`cost:${pid}:${latest}:2`);
+	});
+
+	it("one purchase with differing lines never alerts", async () => {
+		const pid = await freshProduct();
+		await buyLines(pid, 1, [
+			{ qty: 1, cost: 100 },
+			{ qty: 1, cost: 200 },
+		]);
+		expect((await get(viewer)).costChanges.some((a) => a.productId === pid)).toBe(
+			false
+		);
+	});
+
+	it("zero total quantity falls back to the plain average", async () => {
+		const pid = await freshProduct();
+		await buy(pid, 5, 100);
+		await buyLines(pid, 1, [
+			{ qty: 0, cost: 100 },
+			{ qty: 0, cost: 200 },
+		]);
+		const c = (await get(viewer)).costChanges.find((a) => a.productId === pid)!;
+		expect(c.latestCost).toBe(150);
+		expect(c.changePct).toBe(50);
 	});
 
 	it("zero previous cost never alerts", async () => {

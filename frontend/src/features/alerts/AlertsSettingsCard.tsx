@@ -1,8 +1,7 @@
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import Card from "../../components/ui/Card";
 import { HEADER_BTN_PRIMARY, HEADER_BTN_SECONDARY } from "../../components/ui/headerActions";
-import { useAuth } from "../../auth/store";
-import { ApiError } from "../../lib/api";
+import { ApiError, errorMessage, isTransportError } from "../../lib/api";
 import { inputClass } from "../settings/ui";
 import type { AlertThresholds } from "./api";
 import { useAlertThresholds, useSaveAlertThresholds } from "./hooks";
@@ -47,7 +46,7 @@ const FIELDS: Field[] = [
 	{
 		key: "slowMoverMinValue",
 		label: "Slow mover: stock value at least",
-		unit: "$",
+		unit: "base currency",
 		min: 0,
 		max: 100_000_000,
 		integer: false,
@@ -94,11 +93,11 @@ function Form({ initial }: { initial: AlertThresholds }) {
 	// The server's validator text names schema fields, so show a plain sentence instead.
 	const serverError = !save.isError
 		? null
-		: save.error instanceof ApiError
-			? save.error.status === 400
+		: isTransportError(save.error)
+			? errorMessage(save.error)
+			: save.error instanceof ApiError && save.error.status === 400
 				? "Those values were not accepted. Check the limits and try again."
-				: "Could not save the thresholds. Try again."
-			: "Could not reach the server";
+				: "Couldn't save the thresholds. Try again.";
 
 	return (
 		<form
@@ -164,44 +163,22 @@ function Form({ initial }: { initial: AlertThresholds }) {
 	);
 }
 
-function ReadOnly({ values }: { values: AlertThresholds }) {
-	return (
-		<dl className="grid gap-x-6 gap-y-1.5 text-sm sm:grid-cols-2">
-			{FIELDS.map((f) => (
-				<div key={f.key} className="flex justify-between gap-3">
-					<dt className="text-text-muted">{f.label}</dt>
-					<dd className="tabular-nums">
-						{values[f.key]} {f.unit}
-					</dd>
-				</div>
-			))}
-		</dl>
-	);
-}
-
 export default function AlertsSettingsCard() {
-	const isAdmin = useAuth((s) => s.user?.role === "admin");
 	const { data, isLoading, isError, refetch } = useAlertThresholds();
-	const ref = useRef<HTMLDivElement>(null);
-	// Router links don't scroll to a hash on their own; the Alerts page footer links here.
-	useEffect(() => {
-		if (window.location.hash === `#${ANCHOR}`) ref.current?.scrollIntoView?.();
-	}, []);
 	return (
-		<div id={ANCHOR} ref={ref} className="scroll-mt-4">
+		<div id={ANCHOR} className="scroll-mt-4">
 			<Card title="Alerts">
 				<div className="space-y-3">
 					<p className="text-sm text-text-muted">
 						When a cost change or a slow mover shows up on the
 						Alerts page.
-						{!isAdmin && " Only an admin can change these."}
 					</p>
 					{isLoading ? (
 						<p className="text-sm text-text-muted">Loading…</p>
 					) : isError || !data ? (
 						<div className="flex items-center gap-3 text-sm text-error-text">
 							<span role="alert">
-								Could not load the alert thresholds.
+								Couldn't load the alert thresholds.
 							</span>
 							<button
 								type="button"
@@ -211,10 +188,8 @@ export default function AlertsSettingsCard() {
 								Try again
 							</button>
 						</div>
-					) : isAdmin ? (
-						<Form initial={data} />
 					) : (
-						<ReadOnly values={data} />
+						<Form initial={data} />
 					)}
 				</div>
 			</Card>

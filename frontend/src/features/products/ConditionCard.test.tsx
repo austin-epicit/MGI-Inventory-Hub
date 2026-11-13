@@ -103,7 +103,7 @@ describe("ConditionCard", () => {
 		renderCard();
 		await user.click(screen.getByRole("button", { name: "Edit" }));
 		expect(screen.getByLabelText("Notes")).toHaveAttribute("maxlength", "2000");
-		expect(screen.getByText("11 / 2000")).toBeInTheDocument();
+		expect(screen.getByText("11 / 2,000")).toBeInTheDocument();
 	});
 
 	it("save error shows inline and keeps the form open", async () => {
@@ -128,7 +128,9 @@ describe("ConditionCard", () => {
 		renderCard();
 		await user.click(screen.getByRole("button", { name: "Edit" }));
 		await user.click(screen.getByRole("button", { name: "Save" }));
-		expect(await screen.findByRole("alert")).toHaveTextContent("Admins only");
+		expect(await screen.findByRole("alert")).toHaveTextContent(
+			"Only an admin can change the condition."
+		);
 		expect(screen.getByLabelText("Notes")).toBeInTheDocument();
 	});
 
