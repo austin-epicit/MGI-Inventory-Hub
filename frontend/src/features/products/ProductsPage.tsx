@@ -173,7 +173,7 @@ export default function ProductsPage() {
 			rowOf(r).grade ? (
 				<GradeBadge grade={rowOf(r).grade} />
 			) : (
-				<span className="text-text-faint">—</span>
+				<span className="block text-center text-text-faint">—</span>
 			),
 		thumb: (r: Record<string, unknown>) => (
 			<Thumb url={rowOf(r).thumbUrl} name={rowOf(r).name} />
