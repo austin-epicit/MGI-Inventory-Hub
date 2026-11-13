@@ -159,6 +159,28 @@ describe("GET /api/products", () => {
 		expect(ids(await list("?brand=Dell"))).toEqual([P1]);
 	});
 
+	it("filters by grade; grade=none matches ungraded; rows carry grade; bogus → 400", async () => {
+		await mkProduct(1);
+		await mkProduct(2);
+		await mkProduct(3);
+		await testDb.product_condition.create({
+			data: { product_id: P1, grade: "A", updated_at: now },
+		});
+		await testDb.product_condition.create({
+			data: { product_id: P2, grade: "B", updated_at: now },
+		});
+		const a = await list("?grade=A");
+		expect(ids(a)).toEqual([P1]);
+		expect(a.body.meta.count).toBe(1);
+		const none = await list("?grade=none");
+		expect(ids(none)).toEqual([P3]);
+		expect(none.body.meta.count).toBe(1);
+		const all = (await list()).body.data as { id: string; grade: string | null }[];
+		expect(all.find((r) => r.id === P1)?.grade).toBe("A");
+		expect(all.find((r) => r.id === P3)?.grade).toBeNull();
+		expect((await list("?grade=bogus")).status).toBe(400);
+	});
+
 	it("sort by lastSoldDate desc puts never-sold products last; asc too", async () => {
 		await mkProduct(1);
 		await mkProduct(2);

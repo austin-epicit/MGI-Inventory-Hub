@@ -1,5 +1,6 @@
 import { Prisma } from "../../generated/prisma/client.js";
 import type { Db } from "../db.js";
+import { GRADE_LABELS, NOT_GRADED, type ConditionGrade } from "../products/condition.js";
 import {
 	marginPct,
 	rangeFrom,
@@ -10,7 +11,14 @@ import { round4 } from "../sync/money.js";
 import { netSaleLines } from "./netLines.js";
 import { between, grossProfit, type Window } from "./shared.js";
 
-export const BREAKDOWN_DIMENSIONS = ["category", "brand", "customer", "tier", "supplier"] as const;
+export const BREAKDOWN_DIMENSIONS = [
+	"category",
+	"brand",
+	"grade",
+	"customer",
+	"tier",
+	"supplier",
+] as const;
 export type BreakdownBy = (typeof BREAKDOWN_DIMENSIONS)[number];
 
 const TOP_ROWS = 15;
@@ -41,6 +49,7 @@ type Raw = {
 	party_name: string | null;
 	cat: string | null;
 	brand: string | null;
+	grade: string | null;
 	tier: string | null;
 	q: Prisma.Decimal;
 	price: Prisma.Decimal | null;
@@ -73,6 +82,10 @@ const salesKey = (
 			return r.brand === null
 				? { key: null, label: "No brand" }
 				: { key: r.brand, label: r.brand };
+		case "grade":
+			return r.grade === null
+				? { key: null, label: NOT_GRADED }
+				: { key: r.grade, label: GRADE_LABELS[r.grade as ConditionGrade] };
 		case "tier":
 			return r.tier === null
 				? { key: null, label: "No tier" }
@@ -112,14 +125,15 @@ export async function getBreakdown(
 			SELECT l.sale_id::text AS order_id, l.product_id::text AS product_id,
 				l.customer_id::text AS party_id, l.customer_name AS party_name,
 				NULLIF(BTRIM(p.category), '') AS cat, NULLIF(BTRIM(p.brand), '') AS brand,
-				l.tier, l.qty AS q, l.unit_price AS price, l.avg_cost AS avg,
+				pc.grade::text AS grade, l.tier, l.qty AS q, l.unit_price AS price, l.avg_cost AS avg,
 				l.total_base AS total, l.credit
 			FROM (${netSaleLines(w)}) l
-			LEFT JOIN product p ON p.id = l.product_id`
+			LEFT JOIN product p ON p.id = l.product_id
+			LEFT JOIN product_condition pc ON pc.product_id = l.product_id`
 		: await db.$queryRaw<Raw[]>`
 			SELECT o.id::text AS order_id, l.product_id::text AS product_id,
 				o.supplier_id::text AS party_id, o.supplier_name AS party_name,
-				NULL AS cat, NULL AS brand, NULL AS tier, l.quantity AS q,
+				NULL AS cat, NULL AS brand, NULL AS grade, NULL AS tier, l.quantity AS q,
 				NULL::numeric AS price, NULL::numeric AS avg, l.total_base AS total,
 				false AS credit
 			FROM purchase_line l

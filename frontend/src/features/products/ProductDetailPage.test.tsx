@@ -42,6 +42,7 @@ const detail: ProductDetail = {
 		},
 	],
 	tiers: [{ code: 1, name: "Retail", value: 1899 }],
+	condition: null,
 };
 
 const purchases: ProductPurchaseRow[] = [

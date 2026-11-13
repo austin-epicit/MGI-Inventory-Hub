@@ -13,6 +13,7 @@ import { useInsightsBreakdown } from "./hooks";
 const BY_OPTIONS: { id: BreakdownBy; label: string }[] = [
 	{ id: "category", label: "Category" },
 	{ id: "brand", label: "Brand" },
+	{ id: "grade", label: "Grade" },
 	{ id: "customer", label: "Customer" },
 	{ id: "tier", label: "Price tier" },
 	{ id: "supplier", label: "Supplier" },
@@ -21,6 +22,7 @@ const BY_OPTIONS: { id: BreakdownBy; label: string }[] = [
 const LIST_PARAM: Record<BreakdownBy, { path: string; param: string }> = {
 	category: { path: "/products", param: "category" },
 	brand: { path: "/products", param: "brand" },
+	grade: { path: "/products", param: "grade" },
 	customer: { path: "/sales", param: "customerId" },
 	tier: { path: "/sales", param: "tier" },
 	supplier: { path: "/purchases", param: "supplierId" },
@@ -29,6 +31,7 @@ const LIST_PARAM: Record<BreakdownBy, { path: string; param: string }> = {
 /** The list page filtered to one row; null for rows with no key (Uncategorised, No tier…). */
 // eslint-disable-next-line react-refresh/only-export-components -- pure helper, no fast-refresh risk
 export function breakdownHref(by: BreakdownBy, key: string | null): string | null {
+	if (by === "grade") key ??= "none"; // "Not graded" drills to the list's ungraded filter
 	if (key === null) return null;
 	const { path, param } = LIST_PARAM[by];
 	return `${path}?${param}=${encodeURIComponent(key)}`;

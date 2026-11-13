@@ -1,10 +1,12 @@
 import { Router, type RequestHandler } from "express";
 import { z } from "zod";
+import { requireRole } from "../auth/middleware.js";
 import type { Db } from "../db.js";
 import { createSuccessResponse, httpError } from "../http/responses.js";
 import { validate } from "../http/validate.js";
 import { getCachedMe } from "../sync/engine.js";
 import { validTimeZone, zonedParts } from "../sync/dates.js";
+import { CONDITION_GRADES, saveCondition } from "./condition.js";
 import { buildPriceHistory, PRICE_RANGES, rangeFrom, type PriceRange } from "./priceHistory.js";
 import {
 	getProductDetail,
@@ -24,6 +26,7 @@ const listQuery = z.object({
 	category: text.optional(),
 	brand: text.optional(),
 	status: z.enum(["Active", "Setup required", "Deprecated"]).optional(),
+	grade: z.enum([...CONDITION_GRADES, "none"]).optional(),
 	sort: z.enum(PRODUCT_SORTS).default("name"),
 	dir: z.enum(["asc", "desc"]).default("asc"),
 	page: z.coerce.number().int().min(1).default(1),
@@ -34,6 +37,15 @@ const idParam = z.object({ id: z.string().uuid() });
 const pageQuery = z.object({
 	page: z.coerce.number().int().min(1).default(1),
 	limit: z.coerce.number().int().min(1).max(100).default(10),
+});
+const conditionBody = z.object({
+	grade: z.enum(CONDITION_GRADES).nullable(),
+	notes: z
+		.string()
+		.transform((v) => v.trim())
+		.pipe(z.string().max(2000))
+		.transform((v) => (v === "" ? null : v))
+		.nullable(),
 });
 const historyQuery = z.object({
 	range: z.enum(PRICE_RANGES as [PriceRange, ...PriceRange[]]).default("90d"),
@@ -74,6 +86,22 @@ export const createProductRoutes = (
 		if (!detail) throw httpError(404, "NOT_FOUND", "Product not found");
 		res.json(createSuccessResponse(detail));
 	});
+
+	router.put(
+		"/:id/condition",
+		requireRole("admin"),
+		validate({ params: idParam, body: conditionBody }),
+		async (req, res) => {
+			const { id } = req.valid.params as { id: string };
+			await productExists(id);
+			const body = req.valid.body as z.infer<typeof conditionBody>;
+			res.json(
+				createSuccessResponse(
+					await saveCondition(deps.db, id, body, req.user!.id)
+				)
+			);
+		}
+	);
 
 	for (const [path, list] of [
 		["purchases", listProductPurchases],

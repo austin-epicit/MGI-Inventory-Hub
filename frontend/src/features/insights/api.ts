@@ -1,7 +1,7 @@
 import { api } from "../../lib/api";
 import type { PriceRange } from "../../types/priceHistory";
 
-export const BREAKDOWN_BY = ["category", "brand", "customer", "tier", "supplier"] as const;
+export const BREAKDOWN_BY = ["category", "brand", "grade", "customer", "tier", "supplier"] as const;
 export type BreakdownBy = (typeof BREAKDOWN_BY)[number];
 
 export interface InsightsTrendPoint {

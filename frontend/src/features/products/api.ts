@@ -1,5 +1,8 @@
 import { api, apiList } from "../../lib/api";
 import type { PriceHistory, PriceRange } from "../../types/priceHistory";
+import type { ConditionGrade } from "./condition";
+
+export type { ConditionGrade };
 
 export const PRODUCT_STATUSES = ["Active", "Setup required", "Deprecated"] as const;
 
@@ -23,6 +26,7 @@ export interface ProductRow {
 	name: string;
 	category: string | null;
 	brand: string | null;
+	grade: ConditionGrade | null;
 	status: string;
 	onHand: number;
 	available: number;
@@ -39,6 +43,7 @@ export interface ProductListParams {
 	search?: string;
 	category?: string;
 	brand?: string;
+	grade?: ConditionGrade | "none";
 	status?: string;
 	sort?: ProductSortKey;
 	dir?: "asc" | "desc";
@@ -77,6 +82,13 @@ export interface StockAtLocation {
 	inTransit: number;
 }
 
+export interface ProductCondition {
+	grade: ConditionGrade | null;
+	notes: string | null;
+	updatedAt: string;
+	updatedBy: string | null;
+}
+
 export interface ProductDetail {
 	product: {
 		id: string;
@@ -95,6 +107,7 @@ export interface ProductDetail {
 	stock: StockAtLocation[];
 	/** Tiers with a price set; Cin7's 0 ("not set") is left out by the API. */
 	tiers: ProductListPrice[];
+	condition: ProductCondition | null;
 }
 
 export interface ProductPurchaseRow {
@@ -136,3 +149,13 @@ export const fetchProductPurchases = (id: string, page: number, limit: number) =
 
 export const fetchProductSales = (id: string, page: number, limit: number) =>
 	apiList<ProductSaleRow>(`/api/products/${id}/sales?page=${page}&limit=${limit}`);
+
+// Both fields null clears the record; the API answers null then.
+export const saveProductCondition = (
+	id: string,
+	body: { grade: ConditionGrade | null; notes: string | null }
+) =>
+	api<ProductCondition | null>(`/api/products/${id}/condition`, {
+		method: "PUT",
+		body: JSON.stringify(body),
+	});

@@ -4,6 +4,7 @@ import type { Logger } from "pino";
 import { Rng } from "../fixtures/rng.js";
 import { DEMO_DATASET, loadDemo } from "../src/cin7/sourceFactory.js";
 import { createDb, type Db } from "../src/db.js";
+import { gradeFromName } from "../src/products/condition.js";
 import { processPendingImages } from "../src/images/store.js";
 import { log } from "../src/log.js";
 import { runSync, type SyncRunSummary } from "../src/sync/engine.js";
@@ -81,8 +82,35 @@ export async function seedDemo(
 		db.product_price_snapshot.deleteMany({ where: { source: "seed" } }),
 		db.product_price_snapshot.createMany({ data: rows }),
 	]);
+	await seedConditions(db);
 	await seedStockValueHistory(db, clock);
 	return { run, seedSnapshots: rows.length };
+}
+
+const DEMO_CONDITION_NOTES = [
+	"Minor cosmetic wear on lid.",
+	"Includes original box and cables.",
+	"Battery health 85%.",
+];
+
+// Grades the demo products whose names already say a grade; never overwrites an existing row,
+// so a re-seed keeps edits made in the UI.
+async function seedConditions(db: Db): Promise<void> {
+	const graded = (await db.product.findMany({ select: { id: true, sku: true, name: true } }))
+		.map((p) => ({ ...p, grade: gradeFromName(p.name) }))
+		.filter(
+			(p): p is typeof p & { grade: NonNullable<typeof p.grade> } =>
+				p.grade !== null
+		)
+		.sort((a, b) => (a.sku < b.sku ? -1 : a.sku > b.sku ? 1 : 0));
+	await db.product_condition.createMany({
+		data: graded.map((p, i) => ({
+			product_id: p.id,
+			grade: p.grade,
+			notes: DEMO_CONDITION_NOTES[i] ?? null,
+		})),
+		skipDuplicates: true,
+	});
 }
 
 export const STOCK_HISTORY_DAYS = 180;
@@ -118,6 +146,7 @@ const TABLES = [
 	"customer",
 	"product",
 	"product_image",
+	"product_condition",
 	"product_price_snapshot",
 	"stock_value_snapshot",
 	"purchase",

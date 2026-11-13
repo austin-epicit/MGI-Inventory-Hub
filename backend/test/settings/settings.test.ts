@@ -377,6 +377,27 @@ describe("switching Cin7 account", () => {
 		});
 	});
 
+	it("clearMirror deletes product conditions", async () => {
+		await testDb.product.create({
+			data: {
+				id: "00000000-0000-4000-8000-000000000001",
+				sku: "S",
+				name: "P",
+				type: "Stock",
+				status: "Active",
+				average_cost: "1",
+				tier_prices: [],
+				raw: {},
+				synced_at: new Date(),
+			},
+		});
+		await testDb.product_condition.create({
+			data: { product_id: "00000000-0000-4000-8000-000000000001", grade: "A" },
+		});
+		await clearMirror(testDb, new Date());
+		expect(await testDb.product_condition.count()).toBe(0);
+	});
+
 	it("after a clear, a run that started at or after the clear is shown normally", async () => {
 		const agent = await httpApp(await fakeFor(OTHER));
 		const run = (startedAt: string, finishedAt: string) =>

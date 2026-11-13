@@ -1,4 +1,4 @@
-import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { PriceRange } from "../../types/priceHistory";
 import {
 	fetchProduct,
@@ -7,6 +7,7 @@ import {
 	fetchProductPurchases,
 	fetchProducts,
 	fetchProductSales,
+	saveProductCondition,
 	type ProductListParams,
 } from "./api";
 
@@ -47,3 +48,17 @@ export const useProductSales = (id: string, page: number, limit: number) =>
 		queryFn: () => fetchProductSales(id, page, limit),
 		placeholderData: keepPreviousData,
 	});
+
+export function useSaveProductCondition(id: string) {
+	const qc = useQueryClient();
+	return useMutation({
+		mutationFn: (body: Parameters<typeof saveProductCondition>[1]) =>
+			saveProductCondition(id, body),
+		onSuccess: () =>
+			Promise.all([
+				qc.invalidateQueries({ queryKey: ["products", "detail", id] }),
+				qc.invalidateQueries({ queryKey: ["products", "list"] }),
+				qc.invalidateQueries({ queryKey: ["insights", "breakdown"] }),
+			]),
+	});
+}

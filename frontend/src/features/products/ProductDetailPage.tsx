@@ -13,6 +13,7 @@ import { formatDate, formatDateTime, formatMoney, formatQty } from "../../lib/fo
 import type { PriceRange } from "../../types/priceHistory";
 import type { ProductDetail, ProductPurchaseRow, ProductSaleRow } from "./api";
 import { useProduct, useProductPriceHistory, useProductPurchases, useProductSales } from "./hooks";
+import ConditionCard from "./ConditionCard";
 import ProductGallery from "./ProductGallery";
 import ProductKpis from "./ProductKpis";
 
@@ -363,7 +364,7 @@ export default function ProductDetailPage() {
 		);
 	}
 
-	const { product, images, stock, tiers } = detail.data;
+	const { product, images, stock, tiers, condition } = detail.data;
 	return (
 		<div className="flex flex-col gap-4 text-text-primary">
 			<div>
@@ -404,6 +405,10 @@ export default function ProductDetailPage() {
 					<StockCard stock={stock} />
 				</div>
 				<div className="flex min-w-0 flex-col gap-4">
+					<ConditionCard
+						productId={product.id}
+						condition={condition}
+					/>
 					<Card title="Pictures" className="flex-1">
 						<ProductGallery
 							images={images}

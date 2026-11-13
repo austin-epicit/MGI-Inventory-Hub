@@ -13,7 +13,9 @@ import { DropdownFilter } from "../../components/ui/StatusFilter";
 import { useDebouncedValue } from "../../hooks/useDebouncedValue";
 import { useReportSort } from "../../hooks/useReportSort";
 import { formatDate, formatMoney } from "../../lib/format";
-import { PRODUCT_STATUSES, type ProductRow, type ProductSortKey } from "./api";
+import { PRODUCT_STATUSES, type ConditionGrade, type ProductRow, type ProductSortKey } from "./api";
+import { CONDITION_GRADES, GRADE_LABELS, NOT_GRADED } from "./condition";
+import GradeBadge from "./GradeBadge";
 import { useProductFacets, useProducts } from "./hooks";
 
 const HEADER_LABELS: Record<string, string> = {
@@ -22,6 +24,7 @@ const HEADER_LABELS: Record<string, string> = {
 	name: "Name",
 	category: "Category",
 	brand: "Brand",
+	grade: "Grade",
 	status: "Status",
 	onHand: "On hand",
 	averageCost: "Average cost",
@@ -46,6 +49,12 @@ const CLAMP = {
 	category: { maxWidth: "6rem" },
 	brand: { maxWidth: "6rem" },
 };
+const GRADE_OPTIONS = [
+	...CONDITION_GRADES.map((g) => ({ value: g, label: GRADE_LABELS[g] })),
+	{ value: "none", label: NOT_GRADED },
+];
+const gradeFromUrl = (v: string | null) =>
+	GRADE_OPTIONS.some((o) => o.value === v) ? (v as ConditionGrade | "none") : null;
 const NOWRAP = () => "whitespace-nowrap";
 const CELL_CLASS = Object.fromEntries(Object.keys(HEADER_LABELS).map((k) => [k, NOWRAP]));
 
@@ -68,6 +77,9 @@ export default function ProductsPage() {
 	const [initial] = useSearchParams(); // deep links from Insights arrive as filters
 	const [category, setCategory] = useState<string | null>(() => initial.get("category"));
 	const [brand, setBrand] = useState<string | null>(() => initial.get("brand"));
+	const [grade, setGrade] = useState<ConditionGrade | "none" | null>(() =>
+		gradeFromUrl(initial.get("grade"))
+	);
 	const [status, setStatus] = useState<string | null>(null);
 	const [page, setPage] = useState(0);
 	const [pageSize, setPageSize] = useState(50);
@@ -93,6 +105,7 @@ export default function ProductsPage() {
 		search: search || undefined,
 		category: category ?? undefined,
 		brand: brand ?? undefined,
+		grade: grade ?? undefined,
 		status: status ?? undefined,
 		sort: sort.sortKey as ProductSortKey | undefined,
 		dir: sort.sortKey ? sort.sortDir : undefined,
@@ -113,6 +126,7 @@ export default function ProductsPage() {
 				name: r.name,
 				category: r.category ?? "—",
 				brand: r.brand ?? "—",
+				grade: r.grade,
 				status: r.status,
 				onHand: r.onHand,
 				averageCost: r.averageCost,
@@ -133,6 +147,12 @@ export default function ProductsPage() {
 		name: titled("name"),
 		category: titled("category"),
 		brand: titled("brand"),
+		grade: (r: Record<string, unknown>) =>
+			rowOf(r).grade ? (
+				<GradeBadge grade={rowOf(r).grade} />
+			) : (
+				<span className="text-text-faint">—</span>
+			),
 		thumb: (r: Record<string, unknown>) => (
 			<Thumb url={rowOf(r).thumbUrl} name={rowOf(r).name} />
 		),
@@ -165,11 +185,12 @@ export default function ProductsPage() {
 		),
 	};
 
-	const hasFilters = !!(search || category || brand || status);
+	const hasFilters = !!(search || category || brand || grade || status);
 	const clearAll = () => {
 		setSearchInput("");
 		setCategory(null);
 		setBrand(null);
+		setGrade(null);
 		setStatus(null);
 		setPage(0);
 	};
@@ -203,6 +224,18 @@ export default function ProductsPage() {
 							values={brand ? [brand] : null}
 							onChange={filtered(setBrand)}
 							options={toOptions(facets.data?.brands)}
+						/>
+						<DropdownFilter
+							placeholder="Grade"
+							allLabel="All grades"
+							exclusive
+							values={grade ? [grade] : null}
+							onChange={filtered(
+								setGrade as (
+									v: string | null
+								) => void
+							)}
+							options={GRADE_OPTIONS}
 						/>
 						<DropdownFilter
 							placeholder="Status"
@@ -241,6 +274,14 @@ export default function ProductsPage() {
 								color: "cyan" as const,
 								onRemove: () =>
 									filtered(setBrand)(null),
+							}
+						: null,
+					grade
+						? {
+								label: `Grade: ${GRADE_OPTIONS.find((o) => o.value === grade)!.label}`,
+								color: "orange" as const,
+								onRemove: () =>
+									filtered(setGrade)(null),
 							}
 						: null,
 					status

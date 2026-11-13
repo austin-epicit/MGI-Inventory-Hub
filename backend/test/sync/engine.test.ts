@@ -1065,4 +1065,35 @@ describe("dev seed", () => {
 			await testDb.product_price_snapshot.count({ where: { source: "seed" } })
 		).toBe(expected);
 	});
+
+	it("seeds demo grades and notes once, leaving later edits alone", async () => {
+		await seedDemo(testDb, { clock: () => T0, log });
+		const rows = await testDb.product_condition.findMany({
+			include: { product: { select: { name: true, sku: true } } },
+		});
+		expect(rows.length).toBeGreaterThan(0);
+		expect(rows.every((r) => r.grade !== null && r.updated_by === null)).toBe(true);
+		const withNotes = rows
+			.filter((r) => r.notes !== null)
+			.sort((a, b) => a.product.sku.localeCompare(b.product.sku));
+		expect(withNotes.map((r) => r.notes)).toEqual([
+			"Minor cosmetic wear on lid.",
+			"Includes original box and cables.",
+			"Battery health 85%.",
+		]);
+		const first = rows[0]!;
+		await testDb.product_condition.update({
+			where: { product_id: first.product_id },
+			data: { grade: "for_parts", notes: "edited" },
+		});
+		await seedDemo(testDb, { clock: () => at(HOUR), log });
+		expect(await testDb.product_condition.count()).toBe(rows.length);
+		expect(
+			(
+				await testDb.product_condition.findUniqueOrThrow({
+					where: { product_id: first.product_id },
+				})
+			).notes
+		).toBe("edited");
+	});
 });

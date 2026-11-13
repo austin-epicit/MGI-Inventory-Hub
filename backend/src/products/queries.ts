@@ -3,6 +3,7 @@ import type { Db } from "../db.js";
 import { primaryImagePaths, productImages } from "../images/store.js";
 import { addDays, ymdToDbDate } from "../sync/dates.js";
 import { round4 } from "../sync/money.js";
+import { getCondition, type ConditionGrade, type ProductCondition } from "./condition.js";
 import type { PriceHistoryInput } from "./priceHistory.js";
 
 export const PRODUCT_SORTS = [
@@ -20,6 +21,7 @@ export type ProductQuery = {
 	category?: string;
 	brand?: string;
 	status?: string;
+	grade?: ConditionGrade | "none";
 	sort: ProductSort;
 	dir: "asc" | "desc";
 	page: number;
@@ -33,6 +35,7 @@ export type ProductRow = {
 	category: string | null;
 	brand: string | null;
 	status: string;
+	grade: ConditionGrade | null;
 	onHand: number;
 	available: number;
 	averageCost: number;
@@ -79,6 +82,7 @@ type Raw = {
 	category: string | null;
 	brand: string | null;
 	status: string;
+	grade: ConditionGrade | null;
 	average_cost: Prisma.Decimal;
 	tier_prices: Prisma.Decimal[];
 	on_hand: Prisma.Decimal;
@@ -101,6 +105,8 @@ export async function listProducts(
 	if (q.category) where.push(Prisma.sql`BTRIM(p.category) = BTRIM(${q.category})`);
 	if (q.brand) where.push(Prisma.sql`BTRIM(p.brand) = BTRIM(${q.brand})`);
 	if (q.status) where.push(Prisma.sql`p.status = ${q.status}`);
+	if (q.grade === "none") where.push(Prisma.sql`pc.grade IS NULL`);
+	else if (q.grade) where.push(Prisma.sql`pc.grade::text = ${q.grade}`);
 	const whereSql = where.length
 		? Prisma.sql`WHERE ${Prisma.join(where, " AND ")}`
 		: Prisma.empty;
@@ -108,11 +114,13 @@ export async function listProducts(
 
 	// Last purchase/sale: newest counted order date; the order number breaks same-day ties.
 	const rows = await db.$queryRaw<Raw[]>`
-		SELECT p.id, p.sku, p.name, p.category, p.brand, p.status, p.average_cost, p.tier_prices,
+		SELECT p.id, p.sku, p.name, p.category, p.brand, p.status, pc.grade::text AS grade, p.average_cost,
+				p.tier_prices,
 			COALESCE(s.on_hand, 0) AS on_hand, COALESCE(s.available, 0) AS available,
 			lp.unit_cost_base AS lp_cost, lp.order_date AS lp_date,
 			ls.unit_price_base AS ls_price, ls.order_date AS ls_date
 		FROM product p
+		LEFT JOIN product_condition pc ON pc.product_id = p.id
 		LEFT JOIN (
 			SELECT product_id, SUM(on_hand) AS on_hand, SUM(available) AS available
 			FROM stock_level GROUP BY product_id
@@ -134,7 +142,8 @@ export async function listProducts(
 		LIMIT ${q.limit} OFFSET ${(q.page - 1) * q.limit}`;
 
 	const [{ n }] = await db.$queryRaw<{ n: bigint }[]>`
-		SELECT COUNT(*) AS n FROM product p ${whereSql}`;
+		SELECT COUNT(*) AS n FROM product p
+			LEFT JOIN product_condition pc ON pc.product_id = p.id ${whereSql}`;
 
 	const [tiers, images] = await Promise.all([
 		db.price_tier.findMany(),
@@ -154,6 +163,7 @@ export async function listProducts(
 			category: r.category,
 			brand: r.brand,
 			status: r.status,
+			grade: r.grade,
 			onHand: Number(r.on_hand),
 			available: Number(r.available),
 			averageCost: round4(Number(r.average_cost)),
@@ -361,12 +371,13 @@ export type ProductDetail = {
 		inTransit: number;
 	}[];
 	tiers: TierPrice[];
+	condition: ProductCondition | null;
 };
 
 export async function getProductDetail(db: Db, id: string): Promise<ProductDetail | null> {
 	const p = await db.product.findUnique({ where: { id } });
 	if (!p) return null;
-	const [tiers, images, stock] = await Promise.all([
+	const [tiers, images, stock, condition] = await Promise.all([
 		db.price_tier.findMany(),
 		productImages(db, id),
 		// Bins and batches roll up into their location.
@@ -382,6 +393,7 @@ export async function getProductDetail(db: Db, id: string): Promise<ProductDetai
 			},
 			orderBy: { location_name: "asc" },
 		}),
+		getCondition(db, id),
 	]);
 	const sum = (v: Prisma.Decimal | null) => (v === null ? 0 : qty(v));
 	return {
@@ -408,6 +420,7 @@ export async function getProductDetail(db: Db, id: string): Promise<ProductDetai
 			inTransit: sum(s._sum.in_transit),
 		})),
 		tiers: setTierPrices(p.tier_prices, new Map(tiers.map((t) => [t.code, t.name]))),
+		condition,
 	};
 }
 

@@ -11,6 +11,7 @@ const row = (over: Partial<ProductRow> = {}): ProductRow => ({
 	name: "Copper pipe",
 	category: "Parts",
 	brand: "Acme",
+	grade: null,
 	status: "Active",
 	onHand: 12,
 	available: 10,
@@ -81,7 +82,7 @@ describe("ProductsPage", () => {
 		render(<ProductsPage />);
 		const tr = (await screen.findByText("Copper pipe")).closest("tr")!;
 		expect(within(tr).getByText("Not set")).toBeInTheDocument();
-		expect(within(tr).getAllByText("—")).toHaveLength(2);
+		expect(within(tr).getAllByText("—")).toHaveLength(3); // last purchase, last sold, grade
 	});
 
 	it("renders a lazy 40x40 thumbnail, and a placeholder box when there is no picture", async () => {
@@ -142,6 +143,38 @@ describe("ProductsPage", () => {
 		expect(td.firstElementChild).toHaveClass("truncate");
 		expect(screen.getByText("$512.17")).toBeInTheDocument();
 		expect(screen.queryByText(/512\.1726/)).toBeNull();
+	});
+
+	it("shows the grade badge, and a dash when the product is not graded", async () => {
+		rows = [
+			row({ id: "g", name: "Graded", grade: "A" }),
+			row({ id: "n", name: "Plain", grade: null }),
+		];
+		render(<ProductsPage />);
+		const graded = (await screen.findByText("Graded")).closest("tr")!;
+		expect(within(graded).getByText("Grade A")).toBeInTheDocument();
+		const plain = screen.getByText("Plain").closest("tr")!;
+		expect(within(plain).queryByText("Not graded")).toBeNull();
+		expect(within(plain).getAllByText("—").length).toBeGreaterThan(0);
+	});
+
+	it("seeds the grade filter from the URL and shows its chip", async () => {
+		rows = [row()];
+		window.history.replaceState(null, "", "/products?grade=none");
+		render(<ProductsPage />);
+		await waitFor(() => expect(listCalls()[0]?.get("grade")).toBe("none"));
+		expect(await screen.findAllByText("Grade: Not graded")).toHaveLength(2); // trigger + chip
+		window.history.replaceState(null, "", "/");
+	});
+
+	it("choosing a grade sends it to the API", async () => {
+		rows = [row()];
+		render(<ProductsPage />);
+		await screen.findByText("Copper pipe");
+		const user = userEvent.setup();
+		await user.click(screen.getByRole("button", { name: /^Grade/ }));
+		await user.click(screen.getByRole("option", { name: "Grade B" }));
+		await waitFor(() => expect(listCalls().at(-1)!.get("grade")).toBe("B"));
 	});
 
 	it("says so when nothing matches", async () => {

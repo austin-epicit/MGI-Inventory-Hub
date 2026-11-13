@@ -317,6 +317,14 @@ describe("BreakdownCard", () => {
 		expect(window.location.search).toBe("?by=customer");
 	});
 
+	it("offers Grade in the picker and refetches by grade", async () => {
+		const user = userEvent.setup();
+		render(<InsightsPage />);
+		await screen.findByText("Other (4)");
+		await user.click(screen.getByRole("button", { name: "Grade" }));
+		await waitFor(() => expect(breakdownMock).toHaveBeenCalledWith("1y", "grade"));
+	});
+
 	it("shows Spend / Units bought / POs / Products for suppliers", async () => {
 		window.history.replaceState(null, "", "/insights?by=supplier");
 		breakdownMock.mockResolvedValue(
@@ -398,6 +406,10 @@ describe("breakdownHref", () => {
 		expect(breakdownHref("brand", "Acme")).toBe("/products?brand=Acme");
 		expect(breakdownHref("customer", "c1")).toBe("/sales?customerId=c1");
 		expect(breakdownHref("supplier", "s1")).toBe("/purchases?supplierId=s1");
+	});
+	it("maps grade to the products filter, with 'none' for ungraded", () => {
+		expect(breakdownHref("grade", "A")).toBe("/products?grade=A");
+		expect(breakdownHref("grade", null)).toBe("/products?grade=none");
 	});
 	it("returns null for a null key", () => {
 		expect(breakdownHref("category", null)).toBeNull();

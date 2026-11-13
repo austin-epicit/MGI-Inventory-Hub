@@ -179,6 +179,58 @@ describe("GET /api/insights/breakdown", () => {
 		expect(brand.total).toBe(17);
 	});
 
+	it("by grade: graded and Not graded rows, net of credit notes, sum to total", async () => {
+		await mkProduct(1, "Fans");
+		await mkProduct(2, "Fans");
+		await testDb.product_condition.create({
+			data: { product_id: id(1), grade: "A", updated_at: now },
+		});
+		await mkSo(1, "2026-02-12", [
+			{ productId: id(1), qty: 2, price: 20, avg: 10 },
+			{ productId: id(2), qty: 1, price: 30, avg: 10 },
+		]);
+		await testDb.sale_credit_note.create({
+			data: {
+				id: id(3001),
+				sale_id: id(2001),
+				number: "CN-1",
+				credit_date: day("2026-02-14"),
+				status: "AUTHORISED",
+				counted: true,
+				currency_rate: "1",
+				total_base: "20",
+				lines: {
+					create: [
+						{
+							line_no: 1,
+							product_id: id(1),
+							sku: "S",
+							name: "N",
+							quantity: "1",
+							unit_price_base: "20",
+							total_base: "20",
+							average_cost: "10",
+						},
+					],
+				},
+			},
+		});
+		const b = (await get("/api/insights/breakdown?by=grade&range=30d")).body.data;
+		const t = (await get("/api/insights/trend?range=30d")).body.data.totals;
+		expect(b.by).toBe("grade");
+		expect(b.rows).toHaveLength(2);
+		expect(b.rows.find((r: R) => r.key === "A")).toMatchObject({
+			label: "Grade A",
+			amount: 20,
+		});
+		expect(b.rows.find((r: R) => r.key === null)).toMatchObject({
+			label: "Not graded",
+			amount: 30,
+		});
+		expect(b.total).toBe(t.sales);
+		expect(sum(b.rows)).toBeCloseTo(b.total, 4);
+	});
+
 	it("17 customers → 15 rows plus Other (2), orders distinct across merged rows", async () => {
 		await mkProduct(1, "Fans");
 		for (let n = 1; n <= 17; n++)
