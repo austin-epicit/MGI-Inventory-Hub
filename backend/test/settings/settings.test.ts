@@ -398,6 +398,24 @@ describe("switching Cin7 account", () => {
 		expect(await testDb.product_condition.count()).toBe(0);
 	});
 
+	it("clearMirror deletes dismissals and keeps alert thresholds", async () => {
+		const user = await insertUser("d@example.com");
+		await testDb.alert_dismissal.create({
+			data: {
+				user_id: user.id,
+				alert_key: "slow:00000000-0000-4000-8000-000000000001:never",
+			},
+		});
+		await testDb.app_setting.create({
+			data: { key: "alerts.thresholds", value: { costChangePct: 20 } },
+		});
+		await clearMirror(testDb, new Date());
+		expect(await testDb.alert_dismissal.count()).toBe(0);
+		expect(
+			await testDb.app_setting.count({ where: { key: "alerts.thresholds" } })
+		).toBe(1);
+	});
+
 	it("after a clear, a run that started at or after the clear is shown normally", async () => {
 		const agent = await httpApp(await fakeFor(OTHER));
 		const run = (startedAt: string, finishedAt: string) =>

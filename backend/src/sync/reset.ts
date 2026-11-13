@@ -21,6 +21,7 @@ export async function mirrorIsEmpty(db: Db): Promise<boolean> {
 // Cin7's, so they can never be served for the new account's rows).
 export async function clearMirror(db: Db, now: Date): Promise<void> {
 	await db.$transaction([
+		db.alert_dismissal.deleteMany(), // keys embed Cin7 product ids; thresholds in app_setting stay
 		db.product_condition.deleteMany(), // hub-only data, wiped with the account it described
 		db.sale_credit_note.deleteMany(), // lines cascade; no FK to sale, so it is not swept by sale
 		db.sale_line.deleteMany(),

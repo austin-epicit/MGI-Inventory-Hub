@@ -4,7 +4,9 @@ import LoadSvg from "../../assets/icons/loading.svg?react";
 import { QueryErrorState } from "../../components/charts/chartShared";
 import Card from "../../components/ui/Card";
 import EmptyState from "../../components/ui/EmptyState";
+import ExportButton from "../../components/ui/ExportButton";
 import SegmentedToggle from "../../components/ui/SegmentedToggle";
+import { downloadCsv, localYmd, type CsvColumn } from "../../lib/csv";
 import { formatMoney, formatQty } from "../../lib/format";
 import type { PriceRange } from "../../types/priceHistory";
 import type { BreakdownBy, InsightsBreakdownRow } from "./api";
@@ -37,7 +39,27 @@ export function breakdownHref(by: BreakdownBy, key: string | null): string | nul
 	return `${path}?${param}=${encodeURIComponent(key)}`;
 }
 
-const TH = "px-2 py-1.5 text-right font-medium text-text-muted whitespace-nowrap";
+const csvColumns = (label: string, sales: boolean): CsvColumn<InsightsBreakdownRow>[] =>
+	sales
+		? [
+				{ label, value: (r) => r.label },
+				{ label: "Sales", value: (r) => r.amount },
+				{ label: "Gross profit", value: (r) => r.grossProfit },
+				{ label: "Margin %", value: (r) => r.marginPct },
+				{ label: "Units", value: (r) => r.units },
+				{ label: "Orders", value: (r) => r.orders },
+			]
+		: [
+				{ label, value: (r) => r.label },
+				{ label: "Spend", value: (r) => r.amount },
+				{ label: "Units bought", value: (r) => r.units },
+				{ label: "POs", value: (r) => r.orders },
+				{ label: "Products", value: (r) => r.products },
+			];
+
+const TH_BASE = "px-2 py-1.5 font-medium text-text-muted whitespace-nowrap";
+const TH = `${TH_BASE} text-right`;
+const TH_LEFT = `${TH_BASE} text-left`;
 const TD = "px-2 py-1.5 text-right tabular-nums whitespace-nowrap";
 
 function Row({
@@ -132,6 +154,14 @@ export default function BreakdownCard({
 		by
 	);
 	const label = BY_OPTIONS.find((o) => o.id === by)!.label;
+	const exportRows = data ? (data.other ? [...data.rows, data.other] : data.rows) : [];
+	const exportCsv = () =>
+		data &&
+		downloadCsv(
+			`mgi-insights-breakdown-${by}-${range}-${localYmd()}.csv`,
+			csvColumns(label, data.kind === "sales"),
+			exportRows
+		);
 
 	let body;
 	if (error) body = <QueryErrorState what="the breakdown" onRetry={() => void refetch()} />;
@@ -164,10 +194,8 @@ export default function BreakdownCard({
 				>
 					<thead>
 						<tr>
-							<th className={`${TH} text-left`}>
-								{label}
-							</th>
-							<th className={`${TH} text-left`}>
+							<th className={TH_LEFT}>{label}</th>
+							<th className={TH_LEFT}>
 								{sales ? "Sales" : "Spend"}
 							</th>
 							{sales ? (
@@ -228,12 +256,23 @@ export default function BreakdownCard({
 		<Card
 			title="Breakdown"
 			headerAction={
-				<SegmentedToggle<BreakdownBy>
-					ariaLabel="Break down by"
-					value={by}
-					options={BY_OPTIONS}
-					onChange={onByChange}
-				/>
+				<div className="flex items-center gap-2">
+					<SegmentedToggle<BreakdownBy>
+						ariaLabel="Break down by"
+						value={by}
+						options={BY_OPTIONS}
+						onChange={onByChange}
+					/>
+					<ExportButton
+						onExport={exportCsv}
+						disabled={
+							isLoading ||
+							isPlaceholderData ||
+							!data ||
+							exportRows.length === 0
+						}
+					/>
+				</div>
 			}
 		>
 			<div

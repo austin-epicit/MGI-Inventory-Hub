@@ -1,6 +1,7 @@
 import cookieParser from "cookie-parser";
 import express, { type Express, type Router } from "express";
 import pinoHttp from "pino-http";
+import { createAlertRoutes } from "./alerts/routes.js";
 import type { Db } from "./db.js";
 import { createRequireAuth } from "./auth/middleware.js";
 import { createAuthRoutes } from "./auth/routes.js";
@@ -37,6 +38,8 @@ export type AppDeps = {
 	trustProxy?: number;
 	// Tests inject one to flush the debounce; production builds the 15 s one.
 	webhookRunner?: WebhookRunner;
+	// List CSV exports refuse more rows than this; tests lower it to reach the 422.
+	exportRowCap?: number;
 	// Seam for routes that must exist before the 404 handler; the test helper uses it.
 	extraRoutes?: (api: Router) => void;
 };
@@ -99,6 +102,7 @@ export const createApp = (deps: AppDeps): Express => {
 	api.use("/sales", createSaleRoutes(deps, requireAuth));
 	api.use("/overview", createOverviewRoutes(deps, requireAuth));
 	api.use("/insights", createInsightsRoutes(deps, requireAuth));
+	api.use("/alerts", createAlertRoutes(deps, requireAuth));
 
 	deps.extraRoutes?.(api);
 	app.use("/api", api);

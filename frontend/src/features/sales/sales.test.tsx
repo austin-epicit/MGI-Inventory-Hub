@@ -126,6 +126,27 @@ describe("SalesPage", () => {
 	});
 });
 
+describe("SalesPage export", () => {
+	it("links the server export with customer and tier, and no paging", async () => {
+		rows = [row()];
+		render(<SalesPage />);
+		await screen.findByText("SO-0007");
+		const user = userEvent.setup();
+		await user.click(screen.getByRole("button", { name: /^Tier/ }));
+		await user.click(await screen.findByRole("option", { name: "Wholesale" }));
+		await user.click(screen.getByRole("button", { name: /^Customer/ }));
+		await user.click(await screen.findByRole("option", { name: "Initech" }));
+		await waitFor(() => expect(listCalls().at(-1)!.get("customerId")).toBe("c1"));
+		const link = await screen.findByRole("link", { name: "Export CSV" });
+		const url = new URL(link.getAttribute("href")!, "http://x");
+		expect(url.pathname).toBe("/api/sales/export.csv");
+		expect(url.searchParams.get("customerId")).toBe("c1");
+		expect(url.searchParams.get("tier")).toBe("Wholesale");
+		expect(url.searchParams.has("page")).toBe(false);
+		expect(url.searchParams.has("limit")).toBe(false);
+	});
+});
+
 describe("SaleDetailPage", () => {
 	const detail: SaleDetail = {
 		sale: {

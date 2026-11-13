@@ -3,8 +3,10 @@ import LoadSvg from "../../assets/icons/loading.svg?react";
 import { QueryErrorState } from "../../components/charts/chartShared";
 import Card from "../../components/ui/Card";
 import EmptyState from "../../components/ui/EmptyState";
+import ExportButton from "../../components/ui/ExportButton";
+import { downloadCsv, localYmd, type CsvColumn } from "../../lib/csv";
 import { formatMoney, formatQty } from "../../lib/format";
-import type { AgeBucket } from "./api";
+import type { AgeBucket, InsightsStock } from "./api";
 import { useInsightsStock } from "./hooks";
 
 const BUCKET_LABEL: Record<AgeBucket, string> = {
@@ -16,9 +18,21 @@ const BUCKET_LABEL: Record<AgeBucket, string> = {
 	none: "No purchase on record",
 };
 
+// Bucket names use en dashes so a spreadsheet never reads "31-90" as a date.
+const CSV_COLUMNS: CsvColumn<InsightsStock["age"][number]>[] = [
+	{ label: "Age (days)", value: (a) => BUCKET_LABEL[a.bucket] },
+	{ label: "Products", value: (a) => a.products },
+	{ label: "Units", value: (a) => a.units },
+	{ label: "Stock value", value: (a) => a.value },
+];
+
 /** Stock value by time since the product's last counted purchase. */
 export default function StockAgeCard() {
 	const { data, isLoading, error, refetch } = useInsightsStock();
+
+	const exportCsv = () =>
+		data &&
+		downloadCsv(`mgi-insights-stock-age-${localYmd()}.csv`, CSV_COLUMNS, data.age);
 
 	let body;
 	if (error) body = <QueryErrorState what="stock age" onRetry={() => void refetch()} />;
@@ -101,5 +115,14 @@ export default function StockAgeCard() {
 			);
 	}
 
-	return <Card title="Stock age">{body}</Card>;
+	return (
+		<Card
+			title="Stock age"
+			headerAction={
+				<ExportButton onExport={exportCsv} disabled={isLoading || !data} />
+			}
+		>
+			{body}
+		</Card>
+	);
 }

@@ -183,3 +183,35 @@ describe("ProductsPage", () => {
 		expect(await screen.findByText("No products yet")).toBeInTheDocument();
 	});
 });
+
+describe("ProductsPage export", () => {
+	it("links the server export with the active filters and sort, and no paging", async () => {
+		rows = [row()];
+		render(<ProductsPage />);
+		await screen.findByText("Copper pipe");
+		const user = userEvent.setup();
+		await user.click(screen.getByRole("button", { name: /^Category/ }));
+		await user.click(await screen.findByRole("option", { name: "Parts" }));
+		await user.click(screen.getByRole("button", { name: /^Grade/ }));
+		await user.click(await screen.findByRole("option", { name: "Not graded" }));
+		await user.click(screen.getByRole("columnheader", { name: /^SKU/ }));
+		await waitFor(() => expect(listCalls().at(-1)!.get("sort")).toBe("sku"));
+		const link = await screen.findByRole("link", { name: "Export CSV" });
+		const url = new URL(link.getAttribute("href")!, "http://x");
+		expect(url.pathname).toBe("/api/products/export.csv");
+		expect(url.searchParams.get("category")).toBe("Parts");
+		expect(url.searchParams.get("grade")).toBe("none");
+		expect(url.searchParams.get("sort")).toBe("sku");
+		expect(url.searchParams.get("dir")).toBe("asc");
+		expect(url.searchParams.has("page")).toBe(false);
+		expect(url.searchParams.has("limit")).toBe(false);
+		expect(link).toHaveAttribute("download");
+	});
+
+	it("has no export link while there are no rows to export", async () => {
+		rows = [];
+		render(<ProductsPage />);
+		await screen.findByText("No products yet");
+		expect(screen.getByRole("button", { name: "Export CSV" })).toBeDisabled();
+	});
+});

@@ -4,6 +4,7 @@ import Thumb from "../../components/ui/Thumb";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import AdaptableTable from "../../components/ui/AdaptableTable";
 import EmptyState from "../../components/ui/EmptyState";
+import ExportButton from "../../components/ui/ExportButton";
 import FilterChips from "../../components/ui/FilterChips";
 import PageControls from "../../components/ui/PageControls";
 import PageHeader from "../../components/ui/PageHeader";
@@ -12,6 +13,7 @@ import SearchBar from "../../components/ui/SearchBar";
 import { DropdownFilter } from "../../components/ui/StatusFilter";
 import { useDebouncedValue } from "../../hooks/useDebouncedValue";
 import { useReportSort } from "../../hooks/useReportSort";
+import { exportHref } from "../../lib/csv";
 import { formatDate, formatMoney } from "../../lib/format";
 import { PRODUCT_STATUSES, type ConditionGrade, type ProductRow, type ProductSortKey } from "./api";
 import { CONDITION_GRADES, GRADE_LABELS, NOT_GRADED } from "./condition";
@@ -101,7 +103,7 @@ export default function ProductsPage() {
 		},
 	};
 
-	const { data, isLoading, isFetching, error } = useProducts({
+	const query = {
 		search: search || undefined,
 		category: category ?? undefined,
 		brand: brand ?? undefined,
@@ -109,6 +111,9 @@ export default function ProductsPage() {
 		status: status ?? undefined,
 		sort: sort.sortKey as ProductSortKey | undefined,
 		dir: sort.sortKey ? sort.sortDir : undefined,
+	};
+	const { data, isLoading, isFetching, error } = useProducts({
+		...query,
 		page: page + 1,
 		limit: pageSize,
 	});
@@ -197,7 +202,12 @@ export default function ProductsPage() {
 
 	return (
 		<div className="text-text-primary">
-			<PageHeader title="Products" />
+			<PageHeader title="Products">
+				<ExportButton
+					href={exportHref("/api/products", query)}
+					disabled={isLoading || total === 0}
+				/>
+			</PageHeader>
 			<PageControls
 				className="mb-4"
 				left={

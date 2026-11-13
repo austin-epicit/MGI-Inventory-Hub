@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi, type MockInstance } fr
 import userEvent from "@testing-library/user-event";
 import { render, screen, waitFor, within } from "../../test/testUtils";
 import { setFormatContext } from "../../lib/format";
+import { downloadCsv, toCsv } from "../../lib/csv";
 import {
 	fetchInsightsBreakdown,
 	fetchInsightsTrend,
@@ -12,6 +13,7 @@ import {
 	type TopProducts,
 } from "./api";
 import BreakdownCard, { breakdownHref } from "./BreakdownCard";
+import TopProductsCard from "./TopProductsCard";
 import InsightsPage from "./InsightsPage";
 import { mixColor, mixRows } from "./mixSeries";
 import TrendCard from "./TrendCard";
@@ -19,6 +21,12 @@ import ProductsPage from "../products/ProductsPage";
 import PurchasesPage from "../purchases/PurchasesPage";
 import SalesPage from "../sales/SalesPage";
 import { PERIOD_X_AXIS } from "../../components/charts/chartAxis";
+
+vi.mock("../../lib/csv", async () => {
+	const actual = await vi.importActual<typeof import("../../lib/csv")>("../../lib/csv");
+	return { ...actual, downloadCsv: vi.fn() };
+});
+const downloadMock = vi.mocked(downloadCsv);
 
 vi.mock("./api", async () => {
 	const actual = await vi.importActual<typeof import("./api")>("./api");
@@ -122,6 +130,7 @@ beforeEach(() => {
 	breakdownMock.mockResolvedValue(breakdown());
 	topMock.mockReset();
 	topMock.mockResolvedValue({ rows: [tp()] });
+	downloadMock.mockClear();
 	window.history.replaceState(null, "", "/insights");
 });
 afterEach(() => vi.clearAllMocks());
@@ -530,5 +539,106 @@ describe("list page deep links", () => {
 			expect(screen.getAllByText(/Acme Supply/).length).toBeGreaterThanOrEqual(2)
 		);
 		expect(screen.queryByText(/Unknown/)).not.toBeInTheDocument();
+	});
+});
+
+describe("insights CSV export", () => {
+	const ymd = /\d{4}-\d{2}-\d{2}\.csv$/;
+	// The mock records the generic call; narrow it once here.
+	const lastCall = () =>
+		downloadMock.mock.calls.at(-1)! as unknown as [
+			string,
+			Parameters<typeof toCsv<any>>[0], // eslint-disable-line @typescript-eslint/no-explicit-any
+			any[], // eslint-disable-line @typescript-eslint/no-explicit-any
+		];
+
+	it("Breakdown exports the rendered rows, including Other, under a range-and-dimension filename", async () => {
+		const user = userEvent.setup();
+		render(<BreakdownCard range="1y" by="category" onByChange={() => {}} />);
+		await screen.findByRole("table", { name: "Breakdown by category" });
+		await user.click(screen.getByRole("button", { name: "Export CSV" }));
+		expect(downloadMock).toHaveBeenCalledTimes(1);
+		const [filename, columns, rows] = lastCall();
+		expect(filename.startsWith("mgi-insights-breakdown-category-1y-")).toBe(true);
+		expect(filename).toMatch(ymd);
+		const d = breakdown();
+		expect(rows).toEqual([...d.rows, d.other]);
+		const csv = toCsv(columns, rows);
+		expect(csv.split("\r\n")[0]).toBe(
+			"\uFEFFCategory,Sales,Gross profit,Margin %,Units,Orders"
+		);
+		expect(csv).toContain("Other (4),100,200,33.3,1,4");
+	});
+
+	it("Breakdown uses the purchase columns for the supplier dimension", async () => {
+		breakdownMock.mockResolvedValue(
+			breakdown({
+				by: "supplier",
+				kind: "purchases",
+				rows: [brow({ label: "Acme" })],
+				other: null,
+			})
+		);
+		const user = userEvent.setup();
+		render(<BreakdownCard range="90d" by="supplier" onByChange={() => {}} />);
+		await screen.findByRole("table", { name: "Breakdown by supplier" });
+		await user.click(screen.getByRole("button", { name: "Export CSV" }));
+		const [filename, columns, rows] = lastCall();
+		expect(filename.startsWith("mgi-insights-breakdown-supplier-90d-")).toBe(true);
+		expect(toCsv(columns, rows).split("\r\n")[0]).toBe(
+			"\uFEFFSupplier,Spend,Units bought,POs,Products"
+		);
+	});
+
+	it("Breakdown export is disabled while loading", () => {
+		breakdownMock.mockReturnValue(new Promise(() => {}));
+		render(<BreakdownCard range="1y" by="category" onByChange={() => {}} />);
+		expect(screen.getByRole("button", { name: "Export CSV" })).toBeDisabled();
+	});
+
+	it("Breakdown export is disabled while the next dimension is still loading", async () => {
+		const user = userEvent.setup();
+		const { rerender } = render(
+			<BreakdownCard range="1y" by="category" onByChange={() => {}} />
+		);
+		await screen.findByRole("table", { name: "Breakdown by category" });
+		expect(screen.getByRole("button", { name: "Export CSV" })).toBeEnabled();
+		breakdownMock.mockReturnValue(new Promise(() => {}));
+		rerender(<BreakdownCard range="1y" by="brand" onByChange={() => {}} />);
+		await waitFor(() => expect(breakdownMock).toHaveBeenCalledWith("1y", "brand"));
+		expect(screen.getByRole("button", { name: "Export CSV" })).toBeDisabled();
+		await user.click(screen.getByRole("button", { name: "Export CSV" }));
+		expect(downloadMock).not.toHaveBeenCalled();
+	});
+
+	it("Top products export is disabled while the next sort is still loading", async () => {
+		const user = userEvent.setup();
+		render(<TopProductsCard range="1y" />);
+		await screen.findByRole("link", { name: /Rack Server/ });
+		topMock.mockReturnValue(new Promise(() => {}));
+		await user.click(screen.getByRole("button", { name: "Units" }));
+		await waitFor(() => expect(topMock).toHaveBeenCalledWith("1y", "units"));
+		expect(screen.getByRole("button", { name: "Export CSV" })).toBeDisabled();
+	});
+
+	it("Top products exports the rendered rows named by sort and range", async () => {
+		const user = userEvent.setup();
+		render(<TopProductsCard range="1y" />);
+		await screen.findByRole("link", { name: /Rack Server/ });
+		await user.click(screen.getByRole("button", { name: "Gross profit" }));
+		await waitFor(() => expect(topMock).toHaveBeenCalledWith("1y", "profit"));
+		await user.click(screen.getByRole("button", { name: "Export CSV" }));
+		const [filename, columns, rows] = lastCall();
+		expect(filename.startsWith("mgi-insights-top-products-profit-1y-")).toBe(true);
+		expect(rows).toEqual([tp()]);
+		expect(toCsv(columns, rows)).toBe(
+			"\uFEFFProduct,SKU,Sales,Gross profit,Margin %,Units sold,On hand\r\nRack Server,SRV-1,900,300,33.3,3,7\r\n"
+		);
+	});
+
+	it("Top products export is disabled while loading", () => {
+		topMock.mockReturnValue(new Promise(() => {}));
+		render(<TopProductsCard range="1y" />);
+		expect(screen.getByRole("button", { name: "Export CSV" })).toBeDisabled();
 	});
 });

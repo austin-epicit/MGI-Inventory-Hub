@@ -32,6 +32,17 @@ model user {
   created_at     DateTime     @default(now()) @db.Timestamptz(6)
   tokens         auth_token[]
   conditions_edited product_condition[]
+  alert_dismissals  alert_dismissal[]
+}
+
+// Per user: a dismissed alert stays hidden until its key changes (a new purchase, a new sale).
+model alert_dismissal {
+  user_id      String   @db.Uuid
+  alert_key    String
+  dismissed_at DateTime @default(now()) @db.Timestamptz(6)
+  user         user     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@id([user_id, alert_key])
 }
 
 model auth_token {

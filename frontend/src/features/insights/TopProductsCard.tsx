@@ -5,11 +5,13 @@ import LoadSvg from "../../assets/icons/loading.svg?react";
 import { QueryErrorState } from "../../components/charts/chartShared";
 import Card from "../../components/ui/Card";
 import EmptyState from "../../components/ui/EmptyState";
+import ExportButton from "../../components/ui/ExportButton";
 import SegmentedToggle from "../../components/ui/SegmentedToggle";
 import Thumb from "../../components/ui/Thumb";
+import { downloadCsv, localYmd, type CsvColumn } from "../../lib/csv";
 import { formatMoney, formatQty } from "../../lib/format";
 import type { PriceRange } from "../../types/priceHistory";
-import type { TopProductSort } from "./api";
+import type { TopProductRow, TopProductSort } from "./api";
 import { useTopProducts } from "./hooks";
 
 const SORT_OPTIONS: { id: TopProductSort; label: string }[] = [
@@ -18,13 +20,33 @@ const SORT_OPTIONS: { id: TopProductSort; label: string }[] = [
 	{ id: "units", label: "Units" },
 ];
 
-const TH = "px-2 py-1.5 text-right font-medium text-text-muted whitespace-nowrap";
+const CSV_COLUMNS: CsvColumn<TopProductRow>[] = [
+	{ label: "Product", value: (r) => r.name },
+	{ label: "SKU", value: (r) => r.sku },
+	{ label: "Sales", value: (r) => r.sales },
+	{ label: "Gross profit", value: (r) => r.grossProfit },
+	{ label: "Margin %", value: (r) => r.marginPct },
+	{ label: "Units sold", value: (r) => r.units },
+	{ label: "On hand", value: (r) => r.onHand },
+];
+
+const TH_BASE = "px-2 py-1.5 font-medium text-text-muted whitespace-nowrap";
+const TH = `${TH_BASE} text-right`;
+const TH_LEFT = `${TH_BASE} text-left`;
 const TD = "px-2 py-1.5 text-right tabular-nums whitespace-nowrap";
 
 /** The ten best sellers in the range, ranked by sales, gross profit or units. */
 export default function TopProductsCard({ range }: { range: PriceRange }) {
 	const [sort, setSort] = useState<TopProductSort>("sales");
 	const { data, isLoading, error, refetch, isPlaceholderData } = useTopProducts(range, sort);
+
+	const exportCsv = () =>
+		data &&
+		downloadCsv(
+			`mgi-insights-top-products-${sort}-${range}-${localYmd()}.csv`,
+			CSV_COLUMNS,
+			data.rows
+		);
 
 	let body;
 	if (error) body = <QueryErrorState what="top products" onRetry={() => void refetch()} />;
@@ -51,9 +73,7 @@ export default function TopProductsCard({ range }: { range: PriceRange }) {
 				<table className="w-full" aria-label="Top products">
 					<thead>
 						<tr>
-							<th className={`${TH} text-left`}>
-								Product
-							</th>
+							<th className={TH_LEFT}>Product</th>
 							<th className={TH}>Sales</th>
 							<th className={TH}>Gross profit</th>
 							<th className={TH}>Margin %</th>
@@ -129,12 +149,23 @@ export default function TopProductsCard({ range }: { range: PriceRange }) {
 		<Card
 			title="Top products"
 			headerAction={
-				<SegmentedToggle<TopProductSort>
-					ariaLabel="Rank by"
-					value={sort}
-					options={SORT_OPTIONS}
-					onChange={setSort}
-				/>
+				<div className="flex items-center gap-2">
+					<SegmentedToggle<TopProductSort>
+						ariaLabel="Rank by"
+						value={sort}
+						options={SORT_OPTIONS}
+						onChange={setSort}
+					/>
+					<ExportButton
+						onExport={exportCsv}
+						disabled={
+							isLoading ||
+							isPlaceholderData ||
+							!data ||
+							data.rows.length === 0
+						}
+					/>
+				</div>
 			}
 		>
 			<div

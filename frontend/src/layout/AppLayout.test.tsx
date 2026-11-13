@@ -14,6 +14,8 @@ vi.mock("../features/settings/hooks", () => ({
 	useSyncStatus: () => ({ ...hook.state, isError: false, error: null }),
 }));
 
+vi.mock("../features/alerts/hooks", () => ({ useAlerts: () => ({ data: undefined }) }));
+
 const seen: string[] = [];
 function Probe() {
 	const text = formatDateTime("2026-03-01T17:05:00Z");

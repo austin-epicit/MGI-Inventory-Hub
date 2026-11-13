@@ -1,11 +1,19 @@
 import { cloneElement, type ReactElement } from "react";
 import { beforeEach, describe, expect, it, vi, type MockInstance } from "vitest";
+import userEvent from "@testing-library/user-event";
 import { render, screen, waitFor, within } from "../../test/testUtils";
 import { setFormatContext } from "../../lib/format";
+import { downloadCsv, toCsv } from "../../lib/csv";
 import { fetchInsightsStock, SLOW_MOVER_DAYS, type InsightsStock } from "./api";
 import SlowMoversCard from "./SlowMoversCard";
 import StockAgeCard from "./StockAgeCard";
 import StockValueCard from "./StockValueCard";
+
+vi.mock("../../lib/csv", async () => {
+	const actual = await vi.importActual<typeof import("../../lib/csv")>("../../lib/csv");
+	return { ...actual, downloadCsv: vi.fn() };
+});
+const downloadMock = vi.mocked(downloadCsv);
 
 vi.mock("./api", async () => {
 	const actual = await vi.importActual<typeof import("./api")>("./api");
@@ -68,6 +76,7 @@ beforeEach(() => {
 	setFormatContext({ currency: "USD", timeZone: "America/Los_Angeles" });
 	stockMock.mockReset();
 	stockMock.mockResolvedValue(stock());
+	downloadMock.mockClear();
 });
 
 describe("StockValueCard", () => {
@@ -153,5 +162,62 @@ describe("SlowMoversCard", () => {
 		stockMock.mockResolvedValue(stock({ slowMovers: [] }));
 		render(<SlowMoversCard />);
 		await waitFor(() => expect(screen.getByText("No slow movers")).toBeInTheDocument());
+	});
+});
+
+describe("stock CSV export", () => {
+	const ymd = /\d{4}-\d{2}-\d{2}\.csv$/;
+	// The mock records the generic call; narrow it once here.
+	const lastCall = () =>
+		downloadMock.mock.calls.at(-1)! as unknown as [
+			string,
+			Parameters<typeof toCsv<any>>[0], // eslint-disable-line @typescript-eslint/no-explicit-any
+			any[], // eslint-disable-line @typescript-eslint/no-explicit-any
+		];
+
+	it("Slow movers exports product, SKU, on hand, stock value and last sold", async () => {
+		const user = userEvent.setup();
+		render(<SlowMoversCard />);
+		await screen.findByRole("table", { name: "Slow movers" });
+		await user.click(screen.getByRole("button", { name: "Export CSV" }));
+		const [filename, columns, rows] = lastCall();
+		expect(filename.startsWith("mgi-insights-slow-movers-")).toBe(true);
+		expect(filename).toMatch(ymd);
+		expect(rows).toEqual(stock().slowMovers);
+		expect(toCsv(columns, rows)).toBe(
+			"\uFEFFProduct,SKU,On hand,Stock value,Last sold\r\nRack Rail,RR-1,4,800,2026-05-02\r\nPatch Cable,PC-1,9,90,\r\n"
+		);
+	});
+
+	it("Slow movers export is disabled while loading and when empty", async () => {
+		stockMock.mockReturnValue(new Promise(() => {}));
+		const { unmount } = render(<SlowMoversCard />);
+		expect(screen.getByRole("button", { name: "Export CSV" })).toBeDisabled();
+		unmount();
+		stockMock.mockReset();
+		stockMock.mockResolvedValue(stock({ slowMovers: [] }));
+		render(<SlowMoversCard />);
+		await screen.findByText("No slow movers");
+		expect(screen.getByRole("button", { name: "Export CSV" })).toBeDisabled();
+	});
+
+	it("Stock age exports one row per bucket with plain numbers", async () => {
+		const user = userEvent.setup();
+		render(<StockAgeCard />);
+		await screen.findByRole("list", { name: "Stock value by age" });
+		await user.click(screen.getByRole("button", { name: "Export CSV" }));
+		const [filename, columns, rows] = lastCall();
+		expect(filename.startsWith("mgi-insights-stock-age-")).toBe(true);
+		expect(rows).toEqual(stock().age);
+		const lines = toCsv(columns, rows).split("\r\n");
+		expect(lines[0]).toBe("\uFEFFAge (days),Products,Units,Stock value");
+		expect(lines[1]).toBe("0\u201330 days,1,1,100");
+		expect(lines[6]).toBe("No purchase on record,6,6,600");
+	});
+
+	it("Stock age export is disabled while loading", () => {
+		stockMock.mockReturnValue(new Promise(() => {}));
+		render(<StockAgeCard />);
+		expect(screen.getByRole("button", { name: "Export CSV" })).toBeDisabled();
 	});
 });

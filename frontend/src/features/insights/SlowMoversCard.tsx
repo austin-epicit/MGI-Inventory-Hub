@@ -4,12 +4,25 @@ import LoadSvg from "../../assets/icons/loading.svg?react";
 import { QueryErrorState } from "../../components/charts/chartShared";
 import Card from "../../components/ui/Card";
 import EmptyState from "../../components/ui/EmptyState";
+import ExportButton from "../../components/ui/ExportButton";
 import Thumb from "../../components/ui/Thumb";
+import { downloadCsv, localYmd, type CsvColumn } from "../../lib/csv";
 import { formatDate, formatMoney, formatQty } from "../../lib/format";
 import { SLOW_MOVER_DAYS, type InsightsStock } from "./api";
 import { useInsightsStock } from "./hooks";
 
-const TH = "px-2 py-1.5 text-right font-medium text-text-muted whitespace-nowrap";
+type SlowMover = InsightsStock["slowMovers"][number];
+const CSV_COLUMNS: CsvColumn<SlowMover>[] = [
+	{ label: "Product", value: (r) => r.name },
+	{ label: "SKU", value: (r) => r.sku },
+	{ label: "On hand", value: (r) => r.onHand },
+	{ label: "Stock value", value: (r) => r.value },
+	{ label: "Last sold", value: (r) => r.lastSold },
+];
+
+const TH_BASE = "px-2 py-1.5 font-medium text-text-muted whitespace-nowrap";
+const TH = `${TH_BASE} text-right`;
+const TH_LEFT = `${TH_BASE} text-left`;
 const TD = "px-2 py-1.5 text-right tabular-nums whitespace-nowrap";
 
 /** Products holding stock with no counted sale in the last 90 days, biggest stock value first. */
@@ -19,6 +32,14 @@ const rowDetail = (r: InsightsStock["slowMovers"][number]): string =>
 
 export default function SlowMoversCard() {
 	const { data, isLoading, error, refetch } = useInsightsStock();
+
+	const exportCsv = () =>
+		data &&
+		downloadCsv(
+			`mgi-insights-slow-movers-${localYmd()}.csv`,
+			CSV_COLUMNS,
+			data.slowMovers
+		);
 
 	let body;
 	if (error) body = <QueryErrorState what="slow movers" onRetry={() => void refetch()} />;
@@ -49,9 +70,7 @@ export default function SlowMoversCard() {
 					<table className="w-full" aria-label="Slow movers">
 						<thead>
 							<tr>
-								<th className={`${TH} text-left`}>
-									Product
-								</th>
+								<th className={TH_LEFT}>Product</th>
 								<th className={TH}>Stock value</th>
 							</tr>
 						</thead>
@@ -104,5 +123,19 @@ export default function SlowMoversCard() {
 			</>
 		);
 
-	return <Card title="Slow movers">{body}</Card>;
+	return (
+		<Card
+			title="Slow movers"
+			headerAction={
+				<ExportButton
+					onExport={exportCsv}
+					disabled={
+						isLoading || !data || data.slowMovers.length === 0
+					}
+				/>
+			}
+		>
+			{body}
+		</Card>
+	);
 }

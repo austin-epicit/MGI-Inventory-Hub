@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Outlet, useLocation } from "react-router-dom";
 import {
+	Bell,
 	Boxes,
 	ChartColumn,
 	LayoutDashboard,
@@ -10,6 +11,7 @@ import {
 } from "lucide-react";
 import ToastViewport from "../components/ui/ToastViewport";
 import { useAuth } from "../auth/store";
+import { useAlerts } from "../features/alerts/hooks";
 import { useSyncStatus } from "../features/settings/hooks";
 import { setFormatContext } from "../lib/format";
 import FreshnessIndicator from "./FreshnessIndicator";
@@ -24,6 +26,7 @@ export default function AppLayout() {
 	const { pathname } = useLocation();
 	const isAdmin = useAuth((s) => s.user?.role === "admin");
 	const { data: sync, isLoading: syncLoading } = useSyncStatus();
+	const openAlerts = useAlerts().data?.openCount ?? 0;
 	const currency = sync?.baseCurrency ?? undefined;
 	const timeZone = sync?.timeZone ?? undefined;
 	// Set during render, not in an effect: children render after this line, so they format
@@ -74,6 +77,20 @@ export default function AppLayout() {
 							end={false}
 							icon={<ShoppingBag size={ICON_SIZE} />}
 							label="Sales"
+						/>
+						<SideNavItem
+							expanded={expanded}
+							to="/alerts"
+							icon={<Bell size={ICON_SIZE} />}
+							label="Alerts"
+							badgeLabel={`${openAlerts} open alert${openAlerts === 1 ? "" : "s"}`}
+							badge={
+								openAlerts > 99
+									? "99+"
+									: openAlerts > 0
+										? String(openAlerts)
+										: undefined
+							}
 						/>
 					</nav>
 					{isAdmin && (

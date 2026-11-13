@@ -4,6 +4,7 @@ import { ClipboardList } from "lucide-react";
 import AdaptableTable from "../../components/ui/AdaptableTable";
 import DateRangeFilter from "../../components/ui/DateRangeFilter";
 import EmptyState from "../../components/ui/EmptyState";
+import ExportButton from "../../components/ui/ExportButton";
 import FilterChips from "../../components/ui/FilterChips";
 import OrderStatusPill from "../../components/ui/OrderStatusPill";
 import PageControls from "../../components/ui/PageControls";
@@ -13,6 +14,7 @@ import SearchBar from "../../components/ui/SearchBar";
 import { DropdownFilter } from "../../components/ui/StatusFilter";
 import { useDebouncedValue } from "../../hooks/useDebouncedValue";
 import { useReportSort } from "../../hooks/useReportSort";
+import { exportHref } from "../../lib/csv";
 import { formatDate, formatMoney } from "../../lib/format";
 import { formatTriggerLabel, type DateRangeValue } from "../../util/dateRangeUtils";
 import { orderLabel } from "../../lib/orderLabel";
@@ -70,13 +72,16 @@ export default function PurchasesPage() {
 	};
 
 	const range = useMemo(() => rangeToYmd(dates), [dates]);
-	const { data, isLoading, isFetching, error } = usePurchases({
+	const query = {
 		search: search || undefined,
 		status: status ?? undefined,
 		supplierId: supplierId ?? undefined,
 		...range,
 		sort: sort.sortKey as PurchaseSortKey | undefined,
 		dir: sort.sortKey ? sort.sortDir : undefined,
+	};
+	const { data, isLoading, isFetching, error } = usePurchases({
+		...query,
 		page: page + 1,
 		limit: pageSize,
 	});
@@ -156,7 +161,12 @@ export default function PurchasesPage() {
 
 	return (
 		<div className="text-text-primary">
-			<PageHeader title="Purchases" />
+			<PageHeader title="Purchases">
+				<ExportButton
+					href={exportHref("/api/purchases", query)}
+					disabled={isLoading || total === 0}
+				/>
+			</PageHeader>
 			<PageControls
 				className="mb-4"
 				left={

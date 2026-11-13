@@ -1,4 +1,5 @@
 import PageHeader from "../../components/ui/PageHeader";
+import AlertsSettingsCard from "../alerts/AlertsSettingsCard";
 import Cin7ConnectionCard from "./Cin7ConnectionCard";
 import SyncStatusCard from "./SyncStatusCard";
 import UsersCard from "./UsersCard";
@@ -16,6 +17,7 @@ export default function SettingsPage() {
 				<div className="space-y-4">
 					<SyncStatusCard />
 					<WebhooksCard />
+					<AlertsSettingsCard />
 				</div>
 			</div>
 		</>

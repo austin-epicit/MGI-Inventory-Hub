@@ -1,36 +1,66 @@
 import { Router, type RequestHandler } from "express";
 import { z } from "zod";
 import type { Db } from "../db.js";
+import {
+	assertWithinCap,
+	type CsvColumn,
+	EXPORT_ROW_CAP,
+	exportFilename,
+	sendCsv,
+	toCsv,
+} from "../http/csv.js";
 import { createSuccessResponse, httpError } from "../http/responses.js";
 import { validate, ymdParam } from "../http/validate.js";
+import { resolveToday } from "../sync/dates.js";
 import {
 	getPurchaseDetail,
 	listPurchases,
 	purchaseFacets,
 	PURCHASE_SORTS,
+	type PurchaseListRow,
 	type PurchaseQuery,
 } from "./queries.js";
 
 const text = z.string().trim().min(1).max(200);
-const listQuery = z
-	.object({
-		search: text.optional(),
-		status: text.optional(),
-		supplierId: z.string().uuid().optional(),
-		from: ymdParam.optional(),
-		to: ymdParam.optional(),
-		sort: z.enum(PURCHASE_SORTS).default("orderDate"),
-		dir: z.enum(["asc", "desc"]).default("desc"),
+const filterQuery = z.object({
+	search: text.optional(),
+	status: text.optional(),
+	supplierId: z.string().uuid().optional(),
+	from: ymdParam.optional(),
+	to: ymdParam.optional(),
+	sort: z.enum(PURCHASE_SORTS).default("orderDate"),
+	dir: z.enum(["asc", "desc"]).default("desc"),
+});
+const rangeOk = (q: { from?: string; to?: string }) => !q.from || !q.to || q.from <= q.to;
+const rangeIssue = { message: "from must not be after to", path: ["from"] };
+const exportQuery = filterQuery.refine(rangeOk, rangeIssue);
+const listQuery = filterQuery
+	.extend({
 		page: z.coerce.number().int().min(1).default(1),
 		limit: z.coerce.number().int().min(1).max(200).default(50),
 	})
-	.refine((q) => !q.from || !q.to || q.from <= q.to, {
-		message: "from must not be after to",
-		path: ["from"],
-	});
+	.refine(rangeOk, rangeIssue);
 const idParam = z.object({ id: z.string().uuid() });
 
-export const createPurchaseRoutes = (deps: { db: Db }, requireAuth: RequestHandler): Router => {
+const purchaseColumns: CsvColumn<PurchaseListRow>[] = [
+	{ label: "Order number", value: (r) => r.orderNumber },
+	{ label: "Order date", value: (r) => r.orderDate },
+	{ label: "Supplier", value: (r) => r.supplier },
+	{ label: "Status", value: (r) => r.status },
+	{ label: "Counted", value: (r) => (r.counted ? "Yes" : "No") },
+	{ label: "Currency", value: (r) => r.currency },
+	{ label: "Total", value: (r) => r.total },
+	{ label: "Total (base)", value: (r) => r.totalBase },
+	{ label: "Base currency", value: (r) => r.baseCurrency },
+	{ label: "Lines", value: (r) => r.lineCount },
+	{ label: "Receiving status", value: (r) => r.receivingStatus },
+	{ label: "Invoice status", value: (r) => r.invoiceStatus },
+];
+
+export const createPurchaseRoutes = (
+	deps: { db: Db; clock?: () => Date; timeZone?: string; exportRowCap?: number },
+	requireAuth: RequestHandler
+): Router => {
 	const router = Router();
 	router.use(requireAuth);
 
@@ -44,6 +74,22 @@ export const createPurchaseRoutes = (deps: { db: Db }, requireAuth: RequestHandl
 			req.valid.query as PurchaseQuery
 		);
 		res.json(createSuccessResponse(rows, { count: total }));
+	});
+
+	// Before /:id so "export.csv" isn't read as an id.
+	router.get("/export.csv", validate({ query: exportQuery }), async (req, res) => {
+		const cap = deps.exportRowCap ?? EXPORT_ROW_CAP;
+		const { rows, total } = await listPurchases(deps.db, {
+			...(req.valid.query as Omit<PurchaseQuery, "page" | "limit">),
+			page: 1,
+			limit: cap + 1,
+		});
+		assertWithinCap(total, cap);
+		sendCsv(
+			res,
+			exportFilename("purchases", await resolveToday(deps)),
+			toCsv(purchaseColumns, rows)
+		);
 	});
 
 	router.get("/:id", validate({ params: idParam }), async (req, res) => {

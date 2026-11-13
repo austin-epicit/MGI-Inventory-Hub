@@ -191,6 +191,41 @@ describe("PurchasesPage", () => {
 	});
 });
 
+describe("PurchasesPage export", () => {
+	it("links the server export with supplier and status, and no paging", async () => {
+		rows = [row()];
+		render(<PurchasesPage />);
+		await screen.findByText("PO-0042");
+		const user = userEvent.setup();
+		await user.click(screen.getByRole("button", { name: /^Supplier/ }));
+		await user.click(await screen.findByRole("option", { name: "Acme Supply" }));
+		await user.click(screen.getByRole("button", { name: /^Status/ }));
+		await user.click(await screen.findByRole("option", { name: "Voided" }));
+		await waitFor(() => expect(listCalls().at(-1)!.get("status")).toBe("VOIDED"));
+		const link = await screen.findByRole("link", { name: "Export CSV" });
+		const url = new URL(link.getAttribute("href")!, "http://x");
+		expect(url.pathname).toBe("/api/purchases/export.csv");
+		expect(url.searchParams.get("supplierId")).toBe("s1");
+		expect(url.searchParams.get("status")).toBe("VOIDED");
+		expect(url.searchParams.has("page")).toBe(false);
+		expect(url.searchParams.has("limit")).toBe(false);
+	});
+
+	it("carries the from/to of a date preset", async () => {
+		rows = [row()];
+		render(<PurchasesPage />);
+		await screen.findByText("PO-0042");
+		const user = userEvent.setup();
+		await user.click(screen.getByRole("button", { name: /Order date/ }));
+		await user.click(await screen.findByText("Last 7 days"));
+		await waitFor(() => expect(listCalls().at(-1)!.get("from")).toBeTruthy());
+		const link = await screen.findByRole("link", { name: "Export CSV" });
+		const url = new URL(link.getAttribute("href")!, "http://x");
+		expect(url.searchParams.get("from")).toBe(listCalls().at(-1)!.get("from"));
+		expect(url.searchParams.get("to")).toBe(listCalls().at(-1)!.get("to"));
+	});
+});
+
 describe("PurchaseDetailPage", () => {
 	const detail: PurchaseDetail = {
 		purchase: {
