@@ -8,6 +8,7 @@ import {
 } from "../products/priceHistory.js";
 import { ymd } from "../products/queries.js";
 import { round4 } from "../sync/money.js";
+import { earliestNetSaleDate, netSaleLines } from "./netLines.js";
 import { between, grossProfit, type Window } from "./shared.js";
 import { fillPeriods, periodFor, periodStart, type Period } from "./periods.js";
 
@@ -42,7 +43,7 @@ export type Trend = {
 async function earliestOrder(db: Db): Promise<string | null> {
 	const [r] = await db.$queryRaw<{ d: Date | null }[]>`
 		SELECT LEAST(
-			(SELECT MIN(order_date) FROM sale WHERE counted),
+			(${earliestNetSaleDate}),
 			(SELECT MIN(order_date) FROM purchase WHERE counted)
 		) AS d`;
 	return ymd(r!.d);
@@ -57,7 +58,7 @@ export async function getTrend(db: Db, range: PriceRange, today: string): Promis
 	}
 	const w: Window = { from, to: today };
 
-	// Counted orders only: voided and draft ones never feed a chart.
+	// Counted orders only, net of counted credit notes; voided and draft ones never feed a chart.
 	const [saleRows, purchaseRows] = await Promise.all([
 		db.$queryRaw<
 			{
@@ -69,12 +70,10 @@ export async function getTrend(db: Db, range: PriceRange, today: string): Promis
 				total: Prisma.Decimal;
 			}[]
 		>`
-			SELECT s.order_date AS d, NULLIF(BTRIM(p.category), '') AS cat, l.quantity AS q,
-				l.unit_price_base AS price, l.average_cost AS avg, l.total_base AS total
-			FROM sale_line l
-			JOIN sale s ON s.id = l.sale_id
-			LEFT JOIN product p ON p.id = l.product_id
-			WHERE s.counted AND ${between(Prisma.sql`s.order_date`, w)}`,
+			SELECT l.d, NULLIF(BTRIM(p.category), '') AS cat, l.qty AS q, l.unit_price AS price,
+				l.avg_cost AS avg, l.total_base AS total
+			FROM (${netSaleLines(w)}) l
+			LEFT JOIN product p ON p.id = l.product_id`,
 		db.$queryRaw<{ d: Date; total: Prisma.Decimal }[]>`
 			SELECT p.order_date AS d, SUM(l.total_base) AS total
 			FROM purchase_line l JOIN purchase p ON p.id = l.purchase_id

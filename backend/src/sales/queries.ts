@@ -165,6 +165,22 @@ export type SaleLine = {
 	thumbUrl: string | null;
 };
 
+export type SaleCreditNote = {
+	id: string;
+	number: string | null;
+	date: string | null;
+	status: string;
+	counted: boolean;
+	totalBase: number;
+	lines: {
+		sku: string;
+		name: string;
+		quantity: number;
+		unitPriceBase: number;
+		totalBase: number;
+	}[];
+};
+
 export type SaleDetail = {
 	sale: {
 		id: string;
@@ -188,6 +204,7 @@ export type SaleDetail = {
 		syncedAt: string;
 	};
 	lines: SaleLine[];
+	creditNotes: SaleCreditNote[];
 };
 
 export async function getSaleDetail(db: Db, id: string): Promise<SaleDetail | null> {
@@ -196,6 +213,11 @@ export async function getSaleDetail(db: Db, id: string): Promise<SaleDetail | nu
 		include: { lines: { orderBy: { line_no: "asc" } } },
 	});
 	if (!s) return null;
+	const notes = await db.sale_credit_note.findMany({
+		where: { sale_id: id },
+		orderBy: [{ credit_date: "asc" }, { number: "asc" }, { id: "asc" }],
+		include: { lines: { orderBy: { line_no: "asc" } } },
+	});
 	const productIds = [
 		...new Set(s.lines.flatMap((l) => (l.product_id ? [l.product_id] : []))),
 	];
@@ -240,6 +262,21 @@ export async function getSaleDetail(db: Db, id: string): Promise<SaleDetail | nu
 			marginPct: marginPct([marginLine(l)]),
 			totalBase: money(l.total_base)!,
 			thumbUrl: (l.product_id && images.get(l.product_id)?.thumbUrl) || null,
+		})),
+		creditNotes: notes.map((n) => ({
+			id: n.id,
+			number: n.number,
+			date: ymd(n.credit_date),
+			status: n.status,
+			counted: n.counted,
+			totalBase: money(n.total_base)!,
+			lines: n.lines.map((l) => ({
+				sku: l.sku,
+				name: l.name,
+				quantity: qty(l.quantity),
+				unitPriceBase: money(l.unit_price_base)!,
+				totalBase: money(l.total_base)!,
+			})),
 		})),
 	};
 }

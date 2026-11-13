@@ -62,6 +62,22 @@ export interface SaleLine {
 	thumbUrl: string | null;
 }
 
+export interface SaleCreditNote {
+	id: string;
+	number: string | null;
+	date: string | null;
+	status: string;
+	counted: boolean;
+	totalBase: number;
+	lines: {
+		sku: string;
+		name: string;
+		quantity: number;
+		unitPriceBase: number;
+		totalBase: number;
+	}[];
+}
+
 export interface SaleDetail {
 	sale: {
 		id: string;
@@ -85,6 +101,7 @@ export interface SaleDetail {
 		syncedAt: string;
 	};
 	lines: SaleLine[];
+	creditNotes: SaleCreditNote[];
 }
 
 export const fetchSale = (id: string) => api<SaleDetail>(`/api/sales/${id}`);

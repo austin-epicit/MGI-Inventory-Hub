@@ -15,6 +15,7 @@ import {
 	Cin7SupplierPage,
 } from "../../src/cin7/schemas.js";
 import { parseCin7Stamp } from "../../src/cin7/timestamps.js";
+import { mapSale } from "../../src/sync/sales.js";
 import { demoDataset } from "../helpers/dataset.js";
 
 const gen = (seed: number) => generateDataset({ seed, asOf: "2026-11-01", months: 24 });
@@ -264,5 +265,114 @@ describe("demo dataset", () => {
 			expect(t).toBeGreaterThanOrEqual(Date.UTC(2024, 10, 1));
 			expect(t).toBeLessThan(Date.UTC(2026, 10, 1));
 		}
+	});
+});
+
+describe("demo credit notes", () => {
+	const ds = demoDataset();
+	const DAY = 86_400_000;
+	const asOf = Date.parse("2026-11-01T00:00:00Z");
+	const day = (s: string | null | undefined) => Date.parse(`${s!.slice(0, 10)}T00:00:00Z`);
+	const normal = ds.sales.filter((s) => s.Status !== "DRAFT" && s.Status !== "VOIDED");
+	const eligible = normal.filter((s) => day(s.SaleOrderDate) <= asOf - 3 * DAY);
+	const withNote = ds.sales.filter((s) => (s.CreditNotes ?? []).length > 0);
+	const notes = withNote.flatMap((s) => s.CreditNotes ?? []);
+
+	it("about 4% of eligible normal sales carry exactly one credit note", () => {
+		expect(withNote.every((s) => s.CreditNotes!.length === 1)).toBe(true);
+		expect(withNote.every((s) => eligible.includes(s))).toBe(true);
+		const pct = (withNote.length / eligible.length) * 100;
+		expect(pct).toBeGreaterThanOrEqual(3);
+		expect(pct).toBeLessThanOrEqual(5);
+	});
+
+	it("dates run from order + 3 days to the as-of day", () => {
+		for (const s of withNote) {
+			const d = day(s.CreditNotes![0]!.CreditNoteDate);
+			expect(d).toBeGreaterThanOrEqual(day(s.SaleOrderDate) + 3 * DAY);
+			expect(d).toBeLessThanOrEqual(asOf);
+		}
+	});
+
+	it("about 10% are DRAFT, the rest AUTHORISED", () => {
+		expect(new Set(notes.map((n) => n.Status))).toEqual(
+			new Set(["DRAFT", "AUTHORISED"])
+		);
+		const pct = (notes.filter((n) => n.Status === "DRAFT").length / notes.length) * 100;
+		expect(pct).toBeGreaterThanOrEqual(4);
+		expect(pct).toBeLessThanOrEqual(18);
+	});
+
+	it("credits one line, never more than the sale line quantity, at the sale price", () => {
+		for (const s of withNote) {
+			const [cl, ...rest] = s.CreditNotes![0]!.Lines!;
+			expect(rest).toHaveLength(0);
+			const sl = s.Order.Lines.find((l) => l.ProductID === cl!.ProductID)!;
+			expect(cl!.Quantity).toBeGreaterThanOrEqual(1);
+			expect(cl!.Quantity).toBeLessThanOrEqual(sl.Quantity);
+			expect(cl!.Price).toBe(sl.Price);
+			expect(cl!.Discount).toBe(sl.Discount);
+		}
+		expect(withNote.some((s) => s.CreditNotes![0]!.Lines![0]!.Quantity! > 1)).toBe(
+			true
+		);
+	});
+
+	it("every sale still parses and maps through mapSale", () => {
+		for (const s of withNote) {
+			Cin7Sale.parse(s);
+			const item = ds.saleList.find((l) => l.SaleID === s.ID)!;
+			const m = mapSale(s, item);
+			expect(m.creditNotes).toHaveLength(1);
+			expect(m.creditNotes[0]!.note.counted).toBe(
+				s.CreditNotes![0]!.Status === "AUTHORISED"
+			);
+		}
+	});
+
+	it("leaves the existing sections' values unchanged", () => {
+		expect(
+			ds.sales
+				.slice(0, 3)
+				.map((s) => [
+					s.ID,
+					s.SaleOrderDate,
+					s.Order.Total,
+					s.LastModifiedOn,
+				])
+		).toEqual([
+			[
+				"0d38992f-8746-473f-a798-f10834099d91",
+				"2024-11-01T00:00:00",
+				837.9,
+				"2024-11-09T16:43:06.183Z",
+			],
+			[
+				"5ed23249-3df8-4024-95ea-693d29bab085",
+				"2024-11-01T00:00:00",
+				4894.1,
+				"2024-11-07T14:34:28.54Z",
+			],
+			[
+				"18e095db-8c64-4d0a-978e-1f1237a3a652",
+				"2024-11-02T00:00:00",
+				161.5,
+				"2024-11-04T13:39:53.672Z",
+			],
+		]);
+		expect(ds.products.slice(0, 3).map((p) => [p.ID, p.SKU, p.PriceTier1])).toEqual([
+			["80cbb7ab-e2c6-48fc-a372-ef9f42b81282", "DEL-POWEREDGE-R640-A", 2065],
+			["84774441-f271-42e6-aaf6-b87041ecc844", "DEL-POWEREDGE-R640-B", 0],
+			["2fe05d83-0cfc-4245-84f1-52333f45b3e8", "DEL-POWEREDGE-R640-OB", 1480],
+		]);
+		expect(ds.purchases.slice(0, 2).map((p) => [p.ID, p.Order?.Total])).toEqual([
+			["939d32f8-ff35-4d61-a3d9-8bcbad84a856", 9558.16],
+			["124ed687-5c84-4e60-a15e-5b79c5a64ec2", 29845.52],
+		]);
+		expect(ds.availability[0]).toMatchObject({
+			OnHand: 70,
+			Allocated: 3,
+			StockOnHand: 104255.63,
+		});
 	});
 });

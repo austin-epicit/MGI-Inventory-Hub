@@ -1,6 +1,7 @@
 import { Prisma } from "../../generated/prisma/client.js";
 import type { Db } from "../db.js";
 import { primaryImagePaths } from "../images/store.js";
+import { netSaleLines } from "../insights/netLines.js";
 import { marginPct } from "../products/priceHistory.js";
 import { money, ymd } from "../products/queries.js";
 import { addDays, ymdToDbDate } from "../sync/dates.js";
@@ -62,16 +63,16 @@ async function stockKpis(db: Db): Promise<Pick<OverviewKpis, "stockValue" | "uni
 	return { stockValue: value, unitsOnHand: units };
 }
 
-// Counted orders only: voided and draft ones never feed a KPI.
+// Counted orders only, sales net of counted credit notes; voided and draft ones never feed a KPI.
 async function flowKpis(
 	db: Db,
 	w: Window
 ): Promise<Pick<OverviewKpis, "sales" | "purchases" | "grossMarginPct">> {
+	// A date column is never before 0001-01-01, so this bound equals dateBounds' open start.
+	const net = netSaleLines({ from: w.from ?? "0001-01-01", to: w.to });
 	const [[sales], [purchases], saleLines] = await Promise.all([
 		db.$queryRaw<{ total: Prisma.Decimal }[]>`
-			SELECT COALESCE(SUM(l.total_base), 0) AS total
-			FROM sale_line l JOIN sale s ON s.id = l.sale_id
-			WHERE s.counted AND ${dateBounds(Prisma.sql`s.order_date`, w)}`,
+			SELECT COALESCE(SUM(l.total_base), 0) AS total FROM (${net}) l`,
 		db.$queryRaw<{ total: Prisma.Decimal }[]>`
 			SELECT COALESCE(SUM(l.total_base), 0) AS total
 			FROM purchase_line l JOIN purchase p ON p.id = l.purchase_id
@@ -79,9 +80,7 @@ async function flowKpis(
 		db.$queryRaw<
 			{ q: Prisma.Decimal; price: Prisma.Decimal; avg: Prisma.Decimal | null }[]
 		>`
-			SELECT l.quantity AS q, l.unit_price_base AS price, l.average_cost AS avg
-			FROM sale_line l JOIN sale s ON s.id = l.sale_id
-			WHERE s.counted AND ${dateBounds(Prisma.sql`s.order_date`, w)}`,
+			SELECT l.qty AS q, l.unit_price AS price, l.avg_cost AS avg FROM (${net}) l`,
 	]);
 	return {
 		sales: round4(Number(sales!.total)),

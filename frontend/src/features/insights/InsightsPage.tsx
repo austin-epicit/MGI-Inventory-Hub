@@ -19,7 +19,7 @@ export default function InsightsPage() {
 				title="Insights"
 				subtitle={
 					<span className="text-xs text-text-muted">
-						Sales are counted orders before credit notes.
+						Sales are net of credit notes.
 					</span>
 				}
 			>

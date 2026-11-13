@@ -124,6 +124,8 @@ const TABLES = [
 	"purchase_line",
 	"sale",
 	"sale_line",
+	"sale_credit_note",
+	"sale_credit_line",
 	"stock_level",
 	"sync_cursor",
 	"sync_run",
@@ -172,6 +174,19 @@ async function main(): Promise<void> {
 			purchase_line: lines(ds.purchases),
 			sale: ds.sales.length,
 			sale_line: lines(ds.sales),
+			sale_credit_note: ds.sales.reduce(
+				(n, s) => n + (s.CreditNotes?.length ?? 0),
+				0
+			),
+			sale_credit_line: ds.sales.reduce(
+				(n, s) =>
+					n +
+					(s.CreditNotes ?? []).reduce(
+						(m, c) => m + (c.Lines?.length ?? 0),
+						0
+					),
+				0
+			),
 			stock_level: ds.availability.length,
 		};
 		const counts = [];

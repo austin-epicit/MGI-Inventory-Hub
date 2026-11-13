@@ -7,6 +7,7 @@ import {
 	type PriceRange,
 } from "../products/priceHistory.js";
 import { round4 } from "../sync/money.js";
+import { netSaleLines } from "./netLines.js";
 import { between, grossProfit, type Window } from "./shared.js";
 
 export const BREAKDOWN_DIMENSIONS = ["category", "brand", "customer", "tier", "supplier"] as const;
@@ -45,6 +46,7 @@ type Raw = {
 	price: Prisma.Decimal | null;
 	avg: Prisma.Decimal | null;
 	total: Prisma.Decimal;
+	credit: boolean;
 };
 
 type Group = {
@@ -104,23 +106,22 @@ export async function getBreakdown(
 	const w: Window = { from: rangeFrom(range, today) ?? "0001-01-01", to: today };
 	const sales = by !== "supplier";
 
-	// Counted orders only: voided and draft ones never feed a chart.
+	// Counted orders only, net of counted credit notes; voided and draft ones never feed a chart.
 	const raw = sales
 		? await db.$queryRaw<Raw[]>`
-			SELECT s.id::text AS order_id, l.product_id::text AS product_id,
-				s.customer_id::text AS party_id, s.customer_name AS party_name,
+			SELECT l.sale_id::text AS order_id, l.product_id::text AS product_id,
+				l.customer_id::text AS party_id, l.customer_name AS party_name,
 				NULLIF(BTRIM(p.category), '') AS cat, NULLIF(BTRIM(p.brand), '') AS brand,
-				NULLIF(BTRIM(s.price_tier_name), '') AS tier, l.quantity AS q,
-				l.unit_price_base AS price, l.average_cost AS avg, l.total_base AS total
-			FROM sale_line l
-			JOIN sale s ON s.id = l.sale_id
-			LEFT JOIN product p ON p.id = l.product_id
-			WHERE s.counted AND ${between(Prisma.sql`s.order_date`, w)}`
+				l.tier, l.qty AS q, l.unit_price AS price, l.avg_cost AS avg,
+				l.total_base AS total, l.credit
+			FROM (${netSaleLines(w)}) l
+			LEFT JOIN product p ON p.id = l.product_id`
 		: await db.$queryRaw<Raw[]>`
 			SELECT o.id::text AS order_id, l.product_id::text AS product_id,
 				o.supplier_id::text AS party_id, o.supplier_name AS party_name,
 				NULL AS cat, NULL AS brand, NULL AS tier, l.quantity AS q,
-				NULL::numeric AS price, NULL::numeric AS avg, l.total_base AS total
+				NULL::numeric AS price, NULL::numeric AS avg, l.total_base AS total,
+				false AS credit
 			FROM purchase_line l
 			JOIN purchase o ON o.id = l.purchase_id
 			WHERE o.counted AND ${between(Prisma.sql`o.order_date`, w)}`;
@@ -150,8 +151,10 @@ export async function getBreakdown(
 		g.amount += amount;
 		total += amount;
 		g.units += Number(r.q);
-		g.orders.add(r.order_id);
-		if (r.product_id) g.products.add(r.product_id);
+		if (!r.credit) {
+			g.orders.add(r.order_id);
+			if (r.product_id) g.products.add(r.product_id);
+		}
 		if (sales)
 			g.lines.push({
 				qty: Number(r.q),

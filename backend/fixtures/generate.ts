@@ -13,6 +13,7 @@ import type {
 	Cin7Supplier,
 } from "../src/cin7/schemas.js";
 import { buildAvailability } from "./availability.js";
+import { addCreditNotes } from "./creditNotes.js";
 import { createContext, type SeedHistoryPoint } from "./context.js";
 import { buildProducts } from "./products.js";
 import { buildPurchases } from "./purchases.js";
@@ -49,6 +50,7 @@ export function generateDataset(opts: { seed: number; asOf: string; months: numb
 	const purchases = buildPurchases(ctx, ref, prod);
 	const sales = buildSales(ctx, ref, prod);
 	const availability = buildAvailability(ctx, ref, prod.slots, purchases, sales);
+	addCreditNotes(ctx, sales.sales); // last, so earlier sections' draws stay put
 	return {
 		me: ref.me,
 		priceTiers: ref.priceTiers,

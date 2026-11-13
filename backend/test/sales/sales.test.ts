@@ -254,4 +254,135 @@ describe("GET /api/sales/:id", () => {
 		expect(d.lines[1]).toMatchObject({ averageCost: null, marginPct: null });
 		expect(d.sale.marginPct).toBe(40);
 	});
+
+	it("returns the sale's credit notes by date then number, drafts included and not counted", async () => {
+		await mkSo({ n: 3, date: "2026-03-01", lines: [{ qty: "2", price: "10" }] });
+		await mkSo({ n: 4, date: "2026-03-01", lines: [{ qty: "1", price: "10" }] });
+		const note = (
+			n: number,
+			saleN: number,
+			number: string,
+			date: string,
+			status: string,
+			counted: boolean,
+			lines: { sku: string; qty: string; price: string }[]
+		) =>
+			testDb.sale_credit_note.create({
+				data: {
+					id: id(3000 + n),
+					sale_id: id(2000 + saleN),
+					number,
+					credit_date: new Date(`${date}T00:00:00.000Z`),
+					status,
+					counted,
+					currency_rate: "1",
+					total_base: String(
+						lines.reduce(
+							(a, l) =>
+								a + Number(l.qty) * Number(l.price),
+							0
+						)
+					),
+					lines: {
+						create: lines.map((l, i) => ({
+							line_no: i + 1,
+							sku: l.sku,
+							name: `Name ${l.sku}`,
+							quantity: l.qty,
+							unit_price_base: l.price,
+							total_base: String(
+								Number(l.qty) * Number(l.price)
+							),
+						})),
+					},
+				},
+			});
+		await note(2, 3, "CN-2", "2026-03-10", "DRAFT", false, [
+			{ sku: "B", qty: "1", price: "5" },
+		]);
+		await note(1, 3, "CN-1", "2026-03-10", "AUTHORISED", true, [
+			{ sku: "A1", qty: "1", price: "10" },
+			{ sku: "A2", qty: "2", price: "2.5" },
+		]);
+		await note(3, 4, "CN-X", "2026-03-02", "AUTHORISED", true, [
+			{ sku: "Z", qty: "1", price: "1" },
+		]);
+		const d = (await get(`/api/sales/${id(2003)}`)).body.data;
+		expect(d.creditNotes).toEqual([
+			{
+				id: id(3001),
+				number: "CN-1",
+				date: "2026-03-10",
+				status: "AUTHORISED",
+				counted: true,
+				totalBase: 15,
+				lines: [
+					{
+						sku: "A1",
+						name: "Name A1",
+						quantity: 1,
+						unitPriceBase: 10,
+						totalBase: 10,
+					},
+					{
+						sku: "A2",
+						name: "Name A2",
+						quantity: 2,
+						unitPriceBase: 2.5,
+						totalBase: 5,
+					},
+				],
+			},
+			{
+				id: id(3002),
+				number: "CN-2",
+				date: "2026-03-10",
+				status: "DRAFT",
+				counted: false,
+				totalBase: 5,
+				lines: [
+					{
+						sku: "B",
+						name: "Name B",
+						quantity: 1,
+						unitPriceBase: 5,
+						totalBase: 5,
+					},
+				],
+			},
+		]);
+	});
+
+	it("passes a credit note's null number and date through", async () => {
+		await mkSo({ n: 6, date: "2026-03-01", lines: [{}] });
+		await testDb.sale_credit_note.create({
+			data: {
+				id: id(3010),
+				sale_id: id(2006),
+				number: null,
+				credit_date: null,
+				status: "AUTHORISED",
+				counted: true,
+				currency_rate: "1",
+				total_base: "0",
+			},
+		});
+		const d = (await get(`/api/sales/${id(2006)}`)).body.data;
+		expect(d.creditNotes).toEqual([
+			{
+				id: id(3010),
+				number: null,
+				date: null,
+				status: "AUTHORISED",
+				counted: true,
+				totalBase: 0,
+				lines: [],
+			},
+		]);
+	});
+
+	it("a sale with no credit notes returns an empty list", async () => {
+		await mkSo({ n: 5, date: "2026-03-01", lines: [{}] });
+		expect((await get(`/api/sales/${id(2005)}`)).body.data.creditNotes).toEqual([]);
+	});
 });

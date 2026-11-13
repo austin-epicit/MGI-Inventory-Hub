@@ -27,6 +27,13 @@ export type PriceHistoryInput = {
 		qty: number;
 		averageCost: number | null;
 	}[];
+	// Counted credit lines (qty positive, as credited); only the KPI margin nets them.
+	creditLines?: {
+		date: string;
+		unitPrice: number;
+		qty: number;
+		averageCost: number | null;
+	}[];
 	tiers: { code: number; name: string }[];
 	// Earliest non-seed snapshot overall; the route reads it separately since it may predate the range.
 	firstTrackedAt?: string | null;
@@ -279,7 +286,12 @@ export const buildPriceHistory = (
 					: null,
 			averageCost: averageCost[averageCost.length - 1]?.value ?? null,
 			avgSoldPrice: soldUnits > 0 ? round(soldRevenue / soldUnits, 4) : null,
-			marginPct: marginPct(sales),
+			marginPct: marginPct([
+				...sales,
+				...(input.creditLines ?? [])
+					.filter((l) => inRange(l.date))
+					.map((l) => ({ ...l, qty: -l.qty })),
+			]),
 		},
 	};
 };

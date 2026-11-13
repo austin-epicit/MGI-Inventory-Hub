@@ -152,6 +152,32 @@ const saleBlock = z
 	})
 	.passthrough();
 
+const Cin7SaleCreditLine = z
+	.object({
+		ProductID: strN,
+		SKU: strN,
+		Name: strN,
+		Quantity: num.nullish(),
+		Price: num.nullish(),
+		Discount: num.nullish(),
+		Tax: num.nullish(),
+		Total: num.nullish(),
+	})
+	.passthrough();
+
+// Money comes from the lines; header totals and AdditionalCharges are ignored, so they stay optional.
+// TaskID/Status are nullish so a stub note can't fail the sale; mapSale drops the invalid ones.
+const Cin7SaleCreditNote = z
+	.object({
+		TaskID: strN,
+		CreditNoteNumber: strN,
+		CreditNoteDate: strN,
+		Status: strN,
+		CreditNoteConversionRate: num.nullish(),
+		Lines: z.array(Cin7SaleCreditLine).nullish(),
+	})
+	.passthrough();
+
 export const Cin7Sale = z
 	.object({
 		ID: str,
@@ -180,7 +206,7 @@ export const Cin7Sale = z
 					.passthrough()
 			)
 			.nullish(),
-		CreditNotes: z.array(z.object({}).passthrough()).nullish(),
+		CreditNotes: z.array(Cin7SaleCreditNote).nullish(),
 		InventoryMovements: z
 			.array(z.object({ ProductID: str, Date: str, COGS: num }).passthrough())
 			.nullish(),

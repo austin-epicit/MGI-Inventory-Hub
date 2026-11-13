@@ -179,6 +179,7 @@ describe("SaleDetailPage", () => {
 				thumbUrl: null,
 			},
 		],
+		creditNotes: [],
 	};
 	const renderDetail = () =>
 		plainRender(
@@ -216,6 +217,102 @@ describe("SaleDetailPage", () => {
 		// A line without a recorded average cost has no margin, not 100%.
 		const free = screen.getByText("Shipping").closest("tr")!;
 		expect(within(free).getAllByText("—").length).toBe(2);
+	});
+
+	it("lists credit notes in a card with number, date, status, total and lines; drafts read as not counted", async () => {
+		fetchSpy.mockImplementation(async () =>
+			reply({
+				...detail,
+				creditNotes: [
+					{
+						id: "cn-1",
+						number: "CN-0001",
+						date: "2026-03-10",
+						status: "AUTHORISED",
+						counted: true,
+						totalBase: 100,
+						lines: [
+							{
+								sku: "SKU-1",
+								name: "Copper pipe",
+								quantity: 1,
+								unitPriceBase: 100,
+								totalBase: 100,
+							},
+						],
+					},
+					{
+						id: "cn-2",
+						number: "CN-0002",
+						date: "2026-03-12",
+						status: "DRAFT",
+						counted: false,
+						totalBase: 50,
+						lines: [
+							{
+								sku: "SKU-9",
+								name: "Elbow joint",
+								quantity: 2,
+								unitPriceBase: 25,
+								totalBase: 50,
+							},
+						],
+					},
+				],
+			})
+		);
+		renderDetail();
+		expect(await screen.findByText("Credit notes")).toBeInTheDocument();
+		const card = screen.getByRole("table", { name: "Credit notes" });
+		const ok = within(card).getByText("CN-0001").closest("tr")!;
+		expect(within(ok).getByText("Mar 10, 2026")).toBeInTheDocument();
+		expect(within(ok).getByText("Authorised")).toBeInTheDocument();
+		expect(within(ok).getByText("$100.00")).toBeInTheDocument();
+		expect(within(ok).queryByText("Not counted")).not.toBeInTheDocument();
+		expect(within(card).getByText("Copper pipe")).toBeInTheDocument();
+		const draft = within(card).getByText("CN-0002").closest("tr")!;
+		expect(within(draft).getByText("Draft")).toBeInTheDocument();
+		expect(within(draft).getByText("Not counted")).toBeInTheDocument();
+		expect(within(card).getByText("Elbow joint")).toBeInTheDocument();
+	});
+
+	it("shows a dash for a credit note with no number or date", async () => {
+		fetchSpy.mockImplementation(async () =>
+			reply({
+				...detail,
+				creditNotes: [
+					{
+						id: "cn-3",
+						number: null,
+						date: null,
+						status: "AUTHORISED",
+						counted: true,
+						totalBase: 10,
+						lines: [
+							{
+								sku: "SKU-7",
+								name: "Gasket",
+								quantity: 1,
+								unitPriceBase: 10,
+								totalBase: 10,
+							},
+						],
+					},
+				],
+			})
+		);
+		renderDetail();
+		const table = await screen.findByRole("table", { name: "Credit notes" });
+		const row = within(table).getByText("Authorised").closest("tr")!;
+		expect(within(row).getAllByText("—").length).toBe(2);
+		expect(table.textContent).not.toContain(String.fromCharCode(0xfffd));
+	});
+
+	it("renders no credit notes card when there are none", async () => {
+		fetchSpy.mockImplementation(async () => reply(detail));
+		renderDetail();
+		await screen.findByRole("heading", { name: "SO-0007" });
+		expect(screen.queryByText("Credit notes")).not.toBeInTheDocument();
 	});
 
 	it("shows a not-found state for an unknown order", async () => {

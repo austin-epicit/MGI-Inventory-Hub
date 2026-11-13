@@ -8,7 +8,8 @@ import {
 	type PriceRange,
 } from "../products/priceHistory.js";
 import { round4 } from "../sync/money.js";
-import { between, grossProfit, type Window } from "./shared.js";
+import { netSaleLines } from "./netLines.js";
+import { grossProfit, type Window } from "./shared.js";
 
 export const TOP_PRODUCT_SORTS = ["sales", "profit", "units"] as const;
 export type TopProductSort = (typeof TOP_PRODUCT_SORTS)[number];
@@ -54,14 +55,12 @@ export async function getTopProducts(
 ): Promise<{ rows: TopProductRow[] }> {
 	const w: Window = { from: rangeFrom(range, today) ?? "0001-01-01", to: today };
 
-	// Product-linked lines of counted sales only; unlinked lines have no product to rank.
+	// Product-linked net lines only; unlinked lines have no product to rank.
 	const raw = await db.$queryRaw<Raw[]>`
-		SELECT p.id::text AS product_id, p.name, p.sku, l.quantity AS q,
-			l.unit_price_base AS price, l.average_cost AS avg, l.total_base AS total
-		FROM sale_line l
-		JOIN sale s ON s.id = l.sale_id
-		JOIN product p ON p.id = l.product_id
-		WHERE s.counted AND ${between(Prisma.sql`s.order_date`, w)}`;
+		SELECT p.id::text AS product_id, p.name, p.sku, l.qty AS q, l.unit_price AS price,
+			l.avg_cost AS avg, l.total_base AS total
+		FROM (${netSaleLines(w)}) l
+		JOIN product p ON p.id = l.product_id`;
 
 	const groups = new Map<string, Group>();
 	for (const r of raw) {

@@ -6,6 +6,7 @@ import OrderStatusPill from "../../components/ui/OrderStatusPill";
 import Thumb from "../../components/ui/Thumb";
 import { formatDate, formatDateTime, formatMoney, formatQty } from "../../lib/format";
 import { orderLabel } from "../../lib/orderLabel";
+import CreditNotesCard from "./CreditNotesCard";
 import { useSale } from "./hooks";
 
 const TH = "px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wider text-text-muted";
@@ -244,6 +245,11 @@ export default function SaleDetailPage() {
 							</table>
 						</div>
 					</Card>
+
+					<CreditNotesCard
+						creditNotes={d.creditNotes}
+						baseCurrency={s.baseCurrency}
+					/>
 				</>
 			)}
 		</OrderDetailFrame>

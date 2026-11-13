@@ -203,7 +203,7 @@ export async function loadPriceHistoryInput(
 	const snapFrom = from ? new Date(`${addDays(from, -1)}T00:00:00.000Z`) : undefined;
 	const lineSale = { counted: true, order_date: inRange ?? { not: null } };
 
-	const [tiers, purchases, snapshots, snapBefore, sales, saleBefore, firstTracked] =
+	const [tiers, purchases, snapshots, snapBefore, sales, saleBefore, firstTracked, credits] =
 		await Promise.all([
 			db.price_tier.findMany({ orderBy: { code: "asc" } }),
 			db.purchase_line.findMany({
@@ -282,6 +282,23 @@ export async function loadPriceHistoryInput(
 				orderBy: { observed_at: "asc" },
 				select: { observed_at: true },
 			}),
+			// Same rule as netSaleLines: counted notes whose sale exists (source: src/insights/netLines.ts).
+			db.$queryRaw<
+				{
+					d: Date;
+					q: Prisma.Decimal;
+					price: Prisma.Decimal;
+					avg: Prisma.Decimal | null;
+				}[]
+			>`
+				SELECT n.credit_date AS d, c.quantity AS q, c.unit_price_base AS price,
+					c.average_cost AS avg
+				FROM sale_credit_line c
+				JOIN sale_credit_note n ON n.id = c.credit_note_id
+				JOIN sale s ON s.id = n.sale_id
+				WHERE c.product_id = ${productId}::uuid AND n.counted
+					AND n.credit_date IS NOT NULL
+					AND n.credit_date >= ${from ?? "0001-01-01"}::date`,
 		]);
 
 	const saleLine = (l: (typeof sales)[number]) => ({
@@ -310,6 +327,12 @@ export async function loadPriceHistoryInput(
 		})),
 		// The pre-range line only seeds the average-cost carry-in; the builder keeps it out of stats.
 		saleLines: [...(saleBefore ? [saleLine(saleBefore)] : []), ...sales.map(saleLine)],
+		creditLines: credits.map((c) => ({
+			date: ymd(c.d)!,
+			unitPrice: Number(c.price),
+			qty: Number(c.q),
+			averageCost: c.avg === null ? null : Number(c.avg),
+		})),
 		firstTrackedAt: firstTracked?.observed_at.toISOString() ?? null,
 	};
 }

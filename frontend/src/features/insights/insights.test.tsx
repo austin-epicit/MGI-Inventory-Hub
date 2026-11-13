@@ -131,9 +131,7 @@ describe("InsightsPage", () => {
 		render(<InsightsPage />);
 		expect(screen.getByRole("heading", { name: "Insights" })).toBeInTheDocument();
 		expect(screen.getByRole("group", { name: "Date range" })).toBeInTheDocument();
-		expect(
-			screen.getByText("Sales are counted orders before credit notes.")
-		).toBeInTheDocument();
+		expect(screen.getByText("Sales are net of credit notes.")).toBeInTheDocument();
 		await waitFor(() => expect(fetchMock).toHaveBeenCalled());
 		expect(fetchMock.mock.calls.every(([r]) => r === "1y")).toBe(true);
 	});

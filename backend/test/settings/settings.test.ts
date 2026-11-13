@@ -316,6 +316,26 @@ describe("switching Cin7 account", () => {
 	it("confirmReplace clears the mirror and derived state, then saves the new account", async () => {
 		const agent = await httpApp(await fakeFor(OTHER));
 		await seedMirror();
+		await testDb.sale_credit_note.create({
+			data: {
+				id: "11111111-1111-4111-8111-111111111111",
+				sale_id: "22222222-2222-4222-8222-222222222222",
+				status: "AUTHORISED",
+				counted: true,
+				currency_rate: "1",
+				total_base: "5",
+				lines: {
+					create: {
+						line_no: 1,
+						sku: "X",
+						name: "X",
+						quantity: "1",
+						unit_price_base: "5",
+						total_base: "5",
+					},
+				},
+			},
+		});
 		await testDb.app_setting.create({
 			data: {
 				key: "sync.backfill_started_at.sales",
@@ -343,6 +363,8 @@ describe("switching Cin7 account", () => {
 		// The old account's last good run must not feed "Synced N min ago" for the new one.
 		expect((await agent.get("/api/sync/status")).body.data.lastSuccessAt).toBeNull();
 		expect(await testDb.product.count()).toBe(0);
+		expect(await testDb.sale_credit_note.count()).toBe(0);
+		expect(await testDb.sale_credit_line.count()).toBe(0);
 		expect(await testDb.sync_cursor.count()).toBe(0);
 		expect(await testDb.sync_record_failure.count()).toBe(0);
 		expect(await testDb.app_setting.count({ where: { key: "cin7.webhooks" } })).toBe(0);
