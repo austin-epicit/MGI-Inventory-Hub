@@ -36,7 +36,7 @@ interface AdaptableTableProps {
 	// Per-column header text keyed by column id
 	headerLabels?: Record<string, string>;
 	// Per-column horizontal alignment keyed by column id
-	columnAlign?: Record<string, "left" | "right">;
+	columnAlign?: Record<string, "left" | "center" | "right">;
 	// Optional totals row keyed by column id
 	footerRow?: Record<string, React.ReactNode>;
 	// Per-column extra CSS classes, computed from the row.
@@ -125,7 +125,9 @@ const AdaptableTable = ({
 
 	const alignClass = (colId: string) => {
 		if (!columnAlign) return "";
-		return columnAlign[colId] === "right" ? "text-right tabular-nums" : "text-left";
+		const align = columnAlign[colId];
+		if (align === "right") return "text-right tabular-nums";
+		return align === "center" ? "text-center" : "text-left";
 	};
 	const columns = React.useMemo(() => {
 		if (data.length == 0) return [];

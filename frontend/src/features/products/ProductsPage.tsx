@@ -44,7 +44,11 @@ const SORTABLE: Record<string, boolean> = {
 	lastPurchaseDate: true,
 	lastSoldDate: true,
 };
-const COLUMN_ALIGN: Record<string, "left" | "right"> = { onHand: "right", averageCost: "right" };
+const COLUMN_ALIGN: Record<string, "left" | "center" | "right"> = {
+	grade: "center",
+	onHand: "right",
+	averageCost: "right",
+};
 // Name takes the flexible width, the rest stay tight so the table fits at 1440px.
 const CLAMP: Record<string, ColumnClamp> = {
 	sku: { maxWidth: "8.5rem" },
@@ -173,7 +177,7 @@ export default function ProductsPage() {
 			rowOf(r).grade ? (
 				<GradeBadge grade={rowOf(r).grade} />
 			) : (
-				<span className="block text-center text-text-faint">—</span>
+				<span className="text-text-faint">—</span>
 			),
 		thumb: (r: Record<string, unknown>) => (
 			<Thumb url={rowOf(r).thumbUrl} name={rowOf(r).name} />
