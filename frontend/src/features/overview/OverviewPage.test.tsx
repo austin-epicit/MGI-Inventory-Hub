@@ -130,10 +130,11 @@ describe("OverviewPage", () => {
 		expect((await screen.findAllByText("Last 90 days")).length).toBe(3);
 	});
 
-	it("reads a rising cost in the bad tone and a falling one in the good tone", async () => {
+	it("reads a rising cost in the warning tone (never error red) and a falling one in the good tone", async () => {
 		render(<OverviewPage />);
 		const up = (await screen.findByText("+20.0%")).closest("span")!;
-		expect(up.className).toContain("text-error-text");
+		expect(up.className).toContain("text-warning-text");
+		expect(up.className).not.toContain("text-error-text");
 		const down = screen.getByText("−20.0%").closest("span")!;
 		expect(down.className).toContain("text-success-text");
 	});

@@ -62,7 +62,32 @@ beforeEach(() => {
 afterEach(() => vi.restoreAllMocks());
 
 describe("SalesPage", () => {
-	it("lists voided and draft orders with their status pill", async () => {
+	it("hides drafts by default with a visible chip, and one click shows them", async () => {
+		rows = [row()];
+		render(<SalesPage />);
+		await screen.findByText("SO-0007");
+		expect(listCalls().at(-1)!.get("excludeStatus")).toBe("DRAFT");
+		expect(screen.getByText("Drafts hidden")).toBeInTheDocument();
+		await userEvent
+			.setup()
+			.click(screen.getByRole("button", { name: "Remove Drafts hidden filter" }));
+		await waitFor(() => expect(listCalls().at(-1)!.has("excludeStatus")).toBe(false));
+		expect(screen.queryByText("Drafts hidden")).toBeNull();
+	});
+
+	it("picking a status replaces the draft exclusion", async () => {
+		rows = [row()];
+		render(<SalesPage />);
+		await screen.findByText("SO-0007");
+		const user = userEvent.setup();
+		await user.click(screen.getByRole("button", { name: /^Status/, expanded: false }));
+		await user.click(await screen.findByRole("option", { name: "Picking" }));
+		await waitFor(() => expect(listCalls().at(-1)!.get("status")).toBe("PICKING"));
+		expect(listCalls().at(-1)!.has("excludeStatus")).toBe(false);
+		expect(screen.queryByText("Drafts hidden")).toBeNull();
+	});
+
+	it("lists voided and draft orders with their status pill once drafts are shown", async () => {
 		rows = [
 			row(),
 			row({
@@ -79,7 +104,12 @@ describe("SalesPage", () => {
 			}),
 		];
 		render(<SalesPage />);
-		const voided = (await screen.findByText("SO-0008")).closest("tr")!;
+		await screen.findByText("SO-0008");
+		await userEvent
+			.setup()
+			.click(screen.getByRole("button", { name: "Remove Drafts hidden filter" }));
+		await waitFor(() => expect(listCalls().at(-1)!.has("excludeStatus")).toBe(false));
+		const voided = screen.getByText("SO-0008").closest("tr")!;
 		expect(within(voided).getByText("Voided")).toHaveAttribute("data-tone", "red");
 		const draft = screen.getByText("SO-0009").closest("tr")!;
 		expect(within(draft).getByText("Draft")).toHaveAttribute("data-tone", "neutral");

@@ -141,6 +141,7 @@ describe("GET /api/sales", () => {
 			tier: null,
 		});
 		expect(numbers(await get("/api/sales?status=VOIDED"))).toEqual(["SO-2"]);
+		expect(numbers(await get("/api/sales?excludeStatus=VOIDED"))).toEqual(["SO-1"]);
 		expect(numbers(await get(`/api/sales?customerId=${CUST_B}`))).toEqual(["SO-2"]);
 		expect(numbers(await get("/api/sales?tier=Wholesale"))).toEqual(["SO-1"]);
 		const f = (await get("/api/sales/facets")).body.data;

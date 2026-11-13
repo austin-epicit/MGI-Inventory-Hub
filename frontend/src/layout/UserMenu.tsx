@@ -75,10 +75,10 @@ export default function UserMenu() {
 				aria-label="User menu"
 				aria-haspopup="menu"
 				aria-expanded={open}
-				className={`w-9 h-9 rounded-lg bg-avatar-bg flex items-center justify-center pt-[3px] text-avatar-fg font-semibold text-sm border-b-[3px] transition-colors ${
+				className={`w-9 h-9 rounded-lg bg-avatar-bg flex items-center justify-center text-avatar-fg font-semibold text-sm transition-shadow ${
 					open
-						? "border-primary"
-						: "border-transparent hover:border-primary/40"
+						? "ring-2 ring-primary"
+						: "hover:ring-2 hover:ring-primary/40"
 				}`}
 			>
 				{initial}
@@ -87,7 +87,7 @@ export default function UserMenu() {
 			{open && (
 				<div
 					role="menu"
-					className="absolute top-full right-0 mt-2 w-54 bg-surface-raised border border-border-subtle rounded-lg shadow-lg z-50 overflow-hidden"
+					className="absolute top-full right-0 mt-2 w-60 popover-panel z-50 overflow-hidden"
 				>
 					<div className="px-4 py-3 border-b border-border-subtle flex items-start gap-3">
 						<span className="w-10 h-10 shrink-0 rounded-lg bg-avatar-bg flex items-center justify-center text-avatar-fg font-semibold text-sm">
@@ -109,7 +109,7 @@ export default function UserMenu() {
 					<div className="p-2 flex flex-col">
 						<button
 							role="menuitem"
-							className="w-full flex items-center gap-1 px-3 py-2 text-sm text-text-primary rounded-md hover:bg-surface transition-colors"
+							className="w-full flex items-center gap-2 px-3 py-2 text-sm text-text-primary rounded-md hover:bg-surface-raised transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
 							aria-expanded={themeOpen}
 							onClick={() => setThemeOpen((o) => !o)}
 						>
@@ -136,11 +136,11 @@ export default function UserMenu() {
 													value
 												)
 											}
-											className={`w-full flex items-center gap-2 pl-8 pr-3 py-1.5 text-sm rounded-md transition-colors ${
+											className={`w-full flex items-center gap-2 pl-9 pr-3 py-2 text-sm rounded-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 ${
 												theme ===
 												value
-													? "text-primary hover:bg-surface"
-													: "text-text-muted hover:text-text-primary hover:bg-surface"
+													? "text-primary hover:bg-surface-raised"
+													: "text-text-muted hover:text-text-primary hover:bg-surface-raised"
 											}`}
 										>
 											<Icon
@@ -170,7 +170,7 @@ export default function UserMenu() {
 							role="menuitem"
 							onClick={logout}
 							disabled={signingOut}
-							className="w-full flex items-center gap-2 px-3 py-2 text-sm text-text-tertiary rounded-md hover:text-text-primary transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+							className="w-full flex items-center gap-2 px-3 py-2 text-sm text-text-secondary rounded-md hover:bg-surface-raised hover:text-text-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 disabled:opacity-40 disabled:cursor-not-allowed"
 						>
 							<LogOut size={16} />
 							{signingOut ? "Signing out…" : "Sign out"}

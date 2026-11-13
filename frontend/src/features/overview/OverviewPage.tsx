@@ -30,11 +30,11 @@ const RANGE_PHRASE: Record<PriceRange, string> = {
 	all: "All time",
 };
 
-// Rising cost is bad news, so it takes the error tone; tone follows meaning, not sign.
+// Rising cost is bad news but not an error (red is reserved), so it takes the warning tone.
 function ChangeCell({ pct }: { pct: number }) {
 	const flat = Math.abs(pct) < 0.05;
 	const Icon = pct > 0 ? TrendingUp : TrendingDown;
-	const tone = flat ? "text-text-muted" : pct > 0 ? "text-error-text" : "text-success-text";
+	const tone = flat ? "text-text-muted" : pct > 0 ? "text-warning-text" : "text-success-text";
 	return (
 		<span
 			className={`inline-flex items-center gap-1 font-semibold tabular-nums ${tone}`}

@@ -40,7 +40,7 @@ export function ChartChip({ children }: { children: ReactNode }) {
 /** The frosted tooltip surface every chart on this tab hovers with. */
 export function ChartTooltipShell({ title, children }: { title: ReactNode; children: ReactNode }) {
 	return (
-		<div className="rounded-lg px-3 py-2 bg-base/90 backdrop-blur-md shadow-lg border border-border-subtle">
+		<div className="popover-panel px-3 py-2">
 			<p className="text-xs text-text-tertiary mb-1">{title}</p>
 			{children}
 		</div>

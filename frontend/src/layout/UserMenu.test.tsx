@@ -101,7 +101,7 @@ describe("UserMenu a11y and busy state", () => {
 		const user = userEvent.setup();
 		const trigger = screen.getByRole("button", { name: "User menu" });
 		await user.click(trigger);
-		expect(screen.getByRole("menu")).toBeInTheDocument();
+		expect(screen.getByRole("menu")).toHaveClass("popover-panel");
 		await user.keyboard("{Escape}");
 		expect(screen.queryByRole("menu")).toBeNull();
 		expect(trigger).toHaveFocus();

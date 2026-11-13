@@ -40,12 +40,16 @@ const SORTABLE: Record<string, boolean> = {
 };
 const COLUMN_ALIGN: Record<string, "left" | "right"> = { totalBase: "right" };
 const CLAMP = { customer: { maxWidth: "16rem" } };
+// Drafts are mostly $0 placeholders that bury real orders, so the list starts without them.
+const DRAFT = "DRAFT";
 
 export default function SalesPage() {
 	const navigate = useNavigate();
 	const [searchInput, setSearchInput] = useState("");
 	const search = useDebouncedValue(searchInput.trim());
 	const [status, setStatus] = useState<string | null>(null);
+	const [hideDrafts, setHideDrafts] = useState(true);
+	const draftsHidden = hideDrafts && !status; // picking a status, Draft included, overrides it
 	const [initial] = useSearchParams(); // deep links from Insights arrive as filters
 	const [customerId, setCustomerId] = useState<string | null>(() =>
 		initial.get("customerId")
@@ -76,6 +80,7 @@ export default function SalesPage() {
 	const query = {
 		search: search || undefined,
 		status: status ?? undefined,
+		excludeStatus: draftsHidden ? DRAFT : undefined,
 		customerId: customerId ?? undefined,
 		tier: tier ?? undefined,
 		...range,
@@ -151,10 +156,11 @@ export default function SalesPage() {
 
 	const customerName = facets.data?.customers.find((c) => c.id === customerId)?.name;
 	const hasDates = dates.option !== "all";
-	const hasFilters = !!(search || status || customerId || tier || hasDates);
+	const hasFilters = !!(search || status || draftsHidden || customerId || tier || hasDates);
 	const clearAll = () => {
 		setSearchInput("");
 		setStatus(null);
+		setHideDrafts(false);
 		setCustomerId(null);
 		setTier(null);
 		setDates({ option: "all" });
@@ -286,6 +292,16 @@ export default function SalesPage() {
 								color: "green" as const,
 								onRemove: () =>
 									filtered(setStatus)(null),
+							}
+						: null,
+					draftsHidden
+						? {
+								label: "Drafts hidden",
+								color: "green" as const,
+								onRemove: () =>
+									filtered(setHideDrafts)(
+										false
+									),
 							}
 						: null,
 				]}

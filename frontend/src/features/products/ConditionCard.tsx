@@ -13,7 +13,7 @@ import { useSaveProductCondition } from "./hooks";
 const NOTES_MAX = 2000;
 const FIELD_LABEL = "mb-1 block text-xs font-medium text-text-secondary";
 const TEXTAREA =
-	"w-full resize-y rounded-md border border-border-input bg-surface-inset px-3 py-1.5 text-sm text-text-primary placeholder:text-text-faint focus:outline-none focus:ring-1 focus:ring-primary transition-colors";
+	"w-full resize-y rounded-md border border-border-input bg-input-bg px-3 py-1.5 text-sm text-text-primary placeholder:text-text-faint focus:outline-none focus:ring-1 focus:ring-primary transition-colors";
 
 function ConditionForm({
 	productId,

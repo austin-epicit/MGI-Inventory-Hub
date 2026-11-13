@@ -1,3 +1,4 @@
+import BrandMark from "../components/ui/BrandMark";
 import { useState } from "react";
 import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { api, ApiError, errorMessage } from "../lib/api";
@@ -61,6 +62,7 @@ export default function LoginPage() {
 	return (
 		<div className={authPage}>
 			<form noValidate onSubmit={submit} className={authCard}>
+				<BrandMark className="mx-auto mb-1 h-10 w-10 text-text-primary" />
 				<h2 className={authTitle}>MGI Inventory Hub</h2>
 				{sessionExpired && !error && (
 					<p role="status" className={authHint}>

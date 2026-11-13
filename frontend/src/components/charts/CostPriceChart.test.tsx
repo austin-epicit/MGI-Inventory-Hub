@@ -115,11 +115,37 @@ describe("CostPriceChart", () => {
 		expect(chip("List price — Tier 5")).toHaveAttribute("aria-pressed", "true");
 	});
 
-	it("headline strip: rising purchase cost reads in the bad tone", () => {
+	it("headline strip: rising purchase cost reads in the warning tone, not error red", () => {
 		renderChart(history());
 		const delta = screen.getByText("+12.5%");
-		expect(delta.closest("span")).toHaveClass("text-error-text");
+		expect(delta.closest("span")).toHaveClass("text-warning-text");
+		expect(delta.closest("span")).not.toHaveClass("text-error-text");
 		expect(screen.getByText("$450.00")).toBeInTheDocument();
+	});
+
+	it("headline strip: falling purchase cost reads in the success tone", () => {
+		renderChart(history({ stats: { ...history().stats, purchaseCostChangePct: -8 } }));
+		expect(screen.getByText(/8\.0%/).closest("span")).toHaveClass("text-success-text");
+	});
+
+	it("headline strip: the last purchase cost says it is scoped to the range", () => {
+		renderChart(
+			history({ stats: { ...history().stats, purchaseCostChangePct: null } })
+		);
+		expect(screen.getByText("In selected range")).toBeInTheDocument();
+	});
+
+	it("headline strip: no purchase in the range says so instead of a bare dash", () => {
+		renderChart(
+			history({
+				stats: {
+					...history().stats,
+					lastPurchaseCost: null,
+					purchaseCostChangePct: null,
+				},
+			})
+		);
+		expect(screen.getByText("No purchase in range")).toBeInTheDocument();
 	});
 
 	it("margin mode needs sales; with them it can be picked", async () => {
@@ -182,6 +208,19 @@ describe("CostPriceChart", () => {
 		expect(text).toContain("Average cost");
 		expect(text).toContain("List price — Tier 1");
 		expect(text).toContain("Sold price — Tier 1");
+	});
+
+	it("stacks end labels at least 16px apart even when two series end at nearly the same price", () => {
+		const { container } = renderChart(history(tiered(1)));
+		const ys = [...container.querySelectorAll(".recharts-wrapper svg text")]
+			.filter((t) =>
+				/^(Average cost|List price|Sold price)/.test(t.textContent ?? "")
+			)
+			.map((t) => Number(t.getAttribute("y")))
+			.sort((a, b) => a - b);
+		expect(ys.length).toBe(3);
+		for (let i = 1; i < ys.length; i++)
+			expect(ys[i]! - ys[i - 1]!).toBeGreaterThanOrEqual(16);
 	});
 
 	it("draws a hollow dot per purchase and sold-price dots only on real buckets", () => {

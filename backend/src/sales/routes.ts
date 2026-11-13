@@ -25,6 +25,7 @@ const text = z.string().trim().min(1).max(200);
 const filterQuery = z.object({
 	search: text.optional(),
 	status: text.optional(),
+	excludeStatus: text.optional(),
 	customerId: z.string().uuid().optional(),
 	tier: text.optional(),
 	from: ymdParam.optional(),

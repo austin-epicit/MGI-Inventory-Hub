@@ -1,3 +1,4 @@
+import BrandMark from "../components/ui/BrandMark";
 import { useState } from "react";
 import { Outlet, useLocation } from "react-router-dom";
 import {
@@ -114,7 +115,8 @@ export default function AppLayout() {
 						transition: "padding-left 200ms ease-out",
 					}}
 				>
-					<div className="font-semibold text-sm whitespace-nowrap text-text-primary">
+					<div className="flex items-center gap-2 font-semibold text-sm whitespace-nowrap text-text-primary">
+						<BrandMark className="h-6 w-6 shrink-0" />
 						MGI Inventory Hub
 					</div>
 					<div className="flex items-center gap-3">

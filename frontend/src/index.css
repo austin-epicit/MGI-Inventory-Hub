@@ -31,6 +31,14 @@
 	--anim-surface-flash: rgba(0, 0, 0, 0.08);
 }
 
+/* One recipe for every floating layer: menus, dropdowns, chart tooltips. */
+@utility popover-panel {
+	background-color: var(--color-popover);
+	border: 1px solid var(--color-popover-border);
+	border-radius: 0.5rem;
+	box-shadow: var(--popover-shadow);
+}
+
 /* Root scroll surfaces. The app shell is h-screen with its own inner scroller,
    so the document never scrolls — but an inner overscroll still chains to it and
    rubber-bands, exposing the UA white behind the app. Kill the chaining and paint
@@ -158,6 +166,12 @@ input.bg-surface-inset {
 	background-color: var(--color-surface-inset);
 	color: var(--color-text-primary);
 }
+textarea.bg-input-bg,
+select.bg-input-bg,
+input.bg-input-bg {
+	background-color: var(--color-input-bg);
+	color: var(--color-text-primary);
+}
 /* Native checkbox adjacent span — same Chrome injection fix via CSS var. */
 .bg-base label > input + span {
 	color: var(--color-text-secondary);
@@ -200,6 +214,13 @@ input[type="number"] {
 	select {
 		font-size: max(16px, 1em);
 	}
+}
+
+/* Set by useApplyTheme for the frame of a theme swap, so colors jump instead of tweening. */
+.theme-switching *,
+.theme-switching *::before,
+.theme-switching *::after {
+	transition: none !important;
 }
 
 /* Disable animations and transitions for users who have prefers-reduced-motion set */

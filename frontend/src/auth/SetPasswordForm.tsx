@@ -1,3 +1,4 @@
+import BrandMark from "../components/ui/BrandMark";
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import EmptyState from "../components/ui/EmptyState";
@@ -84,6 +85,7 @@ export default function SetPasswordForm({
 	return (
 		<div className={authPage}>
 			<form noValidate onSubmit={submit} className={authCard}>
+				<BrandMark className="mx-auto mb-1 h-10 w-10 text-text-primary" />
 				<h2 className={authTitle}>{title}</h2>
 				{formError && (
 					<p role="alert" className={authError}>

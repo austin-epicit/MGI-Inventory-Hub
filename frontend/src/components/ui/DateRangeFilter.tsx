@@ -279,7 +279,7 @@ function DateRangeDropdown({
 				<div
 					role="listbox"
 					aria-label="Date range"
-					className={`absolute right-0 bg-canvas border border-border-strong rounded-lg shadow-2xl shadow-black/50 z-50 overflow-hidden ${
+					className={`absolute right-0 popover-panel z-50 overflow-hidden ${
 						openAbove ? "bottom-full mb-1.5" : "top-full mt-1.5"
 					} ${tempOption === "custom" ? "w-72" : "w-44"}`}
 				>
@@ -302,7 +302,7 @@ function DateRangeDropdown({
 										option.value
 									)
 										? "bg-primary-bg text-primary-text"
-										: "text-text-secondary hover:bg-surface/70"
+										: "text-text-secondary hover:bg-surface-raised"
 								}`}
 							>
 								<span>{option.label}</span>
@@ -428,7 +428,7 @@ function DateRangeDropdown({
 						zIndex: 60,
 					}}
 					onMouseDown={(e) => e.preventDefault()}
-					className="bg-canvas border border-border rounded-lg shadow-2xl shadow-black/60 p-3"
+					className="popover-panel p-3"
 				>
 					<DayPicker
 						mode="single"

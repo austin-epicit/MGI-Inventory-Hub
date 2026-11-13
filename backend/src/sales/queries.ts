@@ -11,6 +11,7 @@ export type SaleSort = (typeof SALE_SORTS)[number];
 export type SaleQuery = {
 	search?: string;
 	status?: string;
+	excludeStatus?: string;
 	customerId?: string;
 	tier?: string;
 	from?: string;
@@ -77,6 +78,7 @@ export async function listSales(
 		);
 	}
 	if (q.status) where.push(Prisma.sql`s.status = ${q.status}`);
+	if (q.excludeStatus) where.push(Prisma.sql`s.status <> ${q.excludeStatus}`);
 	if (q.customerId) where.push(Prisma.sql`s.customer_id = ${q.customerId}::uuid`);
 	if (q.tier) where.push(Prisma.sql`BTRIM(s.price_tier_name) = BTRIM(${q.tier})`);
 	if (q.from) where.push(Prisma.sql`s.order_date >= ${q.from}::date`);

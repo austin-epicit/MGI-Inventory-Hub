@@ -154,6 +154,24 @@ describe("ProductsPage", () => {
 		await waitFor(() => expect(listCalls().at(-1)!.get("search")).toBe("abc"));
 	});
 
+	it("drops the Brand column below 1440px so the table fits a laptop", async () => {
+		const original = window.matchMedia;
+		window.matchMedia = vi.fn().mockImplementation((query: string) => ({
+			matches: query.includes("max-width: 1439.98px"),
+			media: query,
+			addEventListener: vi.fn(),
+			removeEventListener: vi.fn(),
+		})) as unknown as typeof window.matchMedia;
+		try {
+			rows = [row()];
+			render(<ProductsPage />);
+			await screen.findByRole("columnheader", { name: /Category/ });
+			expect(screen.queryByRole("columnheader", { name: /^Brand/ })).toBeNull();
+		} finally {
+			window.matchMedia = original;
+		}
+	});
+
 	it("never wraps the SKU, truncates it with a title, and shows money to 2 decimals", async () => {
 		rows = [row({ sku: "CIS-ASA-5516-X-FIREWALL-A", averageCost: 512.1726 })];
 		render(<ProductsPage />);
@@ -163,6 +181,18 @@ describe("ProductsPage", () => {
 		expect(td.firstElementChild).toHaveClass("truncate");
 		expect(screen.getByText("$512.17")).toBeInTheDocument();
 		expect(screen.queryByText(/512\.1726/)).toBeNull();
+	});
+
+	it("wraps a long name onto two lines with a single full-name tooltip", async () => {
+		const name = "Cisco Catalyst 2960X 48-port gigabit switch with PoE";
+		rows = [row({ name })];
+		render(<ProductsPage />);
+		const link = await screen.findByRole("link", { name });
+		expect(link).not.toHaveAttribute("title");
+		const clamp = link.parentElement!;
+		expect(clamp).toHaveClass("line-clamp-2");
+		expect(clamp).toHaveAttribute("title", name);
+		expect(link.closest("td")).not.toHaveClass("whitespace-nowrap");
 	});
 
 	it("shows the grade badge, and a dash when the product is not graded", async () => {

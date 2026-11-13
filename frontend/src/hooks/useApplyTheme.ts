@@ -1,6 +1,18 @@
 import { useEffect, useState } from "react";
 import { useThemeStore } from "../stores/themeStore";
 
+// Every transition-colors element would otherwise animate the swap, leaving text the old
+// color on the new background for a moment. Transitions are off until two frames have painted.
+function setDocumentTheme(next: "dark" | "light") {
+	const root = document.documentElement;
+	if (root.dataset.theme === next) return;
+	root.classList.add("theme-switching");
+	root.dataset.theme = next;
+	requestAnimationFrame(() =>
+		requestAnimationFrame(() => root.classList.remove("theme-switching"))
+	);
+}
+
 export function useApplyTheme() {
 	const theme = useThemeStore((s) => s.theme);
 
@@ -8,8 +20,7 @@ export function useApplyTheme() {
 		const mq = window.matchMedia("(prefers-color-scheme: dark)");
 
 		const apply = (prefersDark: boolean) => {
-			const effective = prefersDark ? "dark" : "light";
-			document.documentElement.dataset.theme = effective;
+			setDocumentTheme(prefersDark ? "dark" : "light");
 		};
 
 		if (theme === "system") {
@@ -38,7 +49,7 @@ export function useApplyTheme() {
 				window.removeEventListener("afterprint", onAfterPrint);
 			};
 		} else {
-			document.documentElement.dataset.theme = theme;
+			setDocumentTheme(theme);
 		}
 	}, [theme]);
 }

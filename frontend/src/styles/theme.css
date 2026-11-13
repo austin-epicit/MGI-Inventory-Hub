@@ -6,7 +6,8 @@
 	--color-base: #ffffff; /* brightest card/panel layer */
 	--color-surface: #fafcfe; /* secondary layer — near-white, 5 units off base (was #f5f7fa) */
 	--color-surface-raised: #f0f3f7; /* hover/selected — now DARKER than surface, see note (was #fdfeff) */
-	--color-surface-inset: #dde2ea; /* recessed wells/inputs — brightened, still below canvas (was #d3d9e3) */
+	--color-surface-inset: #dde2ea; /* recessed wells — brightened, still below canvas (was #d3d9e3) */
+	--color-input-bg: #ffffff; /* text fields — inset gray read as disabled in light */
 
 	/* ── Text ────────────────────────────────────────────────────────────── */
 	/* Slate hierarchy — cool authority, matches dark mode's zinc personality */
@@ -41,6 +42,11 @@
 	--color-border-strong: #b2bcc9; /* emphasized edge — still clearly present (was #6080a0) */
 	--color-border-card: #e2e6ec; /* card edge — matches subtle (was #b5c4db) */
 	--color-border-input: #a6b0be; /* input — firm field boundary, no longer navy (was #5e7a98) */
+
+	/* ── Popover (menus, dropdowns, tooltips) ── */
+	/* Sits on base, never canvas: canvas is the page floor and reads sunken in light. */
+	--color-popover: #ffffff;
+	--color-popover-border: #d0d6df;
 
 	/* ── Identity / avatar ────────────────────────────────────────────────── */
 	/* Deliberately NOT a border token. Avatar fills used to borrow --color-border
@@ -149,6 +155,12 @@
 	--color-chart-cat-uncategorised: #1e293b; /* slate-800 */
 }
 
+/* Plain var, not a --shadow-* token: Tailwind inlines theme shadows, so a dark override would
+   never reach them. Lives here so [data-theme="dark"] below wins on source order. */
+:root {
+	--popover-shadow: 0 1px 2px rgb(15 23 42 / 0.06), 0 8px 24px -4px rgb(15 23 42 / 0.14);
+}
+
 /* ── Dark mode overrides ──────────────────────────────────────────────────
  * Applied when data-theme="dark" on <html>. Overrides the light @theme
  * defaults above. Toggle: document.documentElement.dataset.theme = "dark"
@@ -161,6 +173,7 @@
 	--color-surface: #111115; /* recessed layer — sits between canvas and base, closer to canvas */
 	--color-surface-raised: #3f3f46;
 	--color-surface-inset: #09090b;
+	--color-input-bg: #09090b;
 
 	/* Text */
 	--color-text-primary: #ffffff;
@@ -189,6 +202,11 @@
 	--color-border-strong: #71717a; /* zinc-500 — emphasized, ~3.3:1 on surface */
 	--color-border-card: #48484f; /* card edge — between subtle and default */
 	--color-border-input: #717179; /* input — zinc-500 tier, strong field boundary */
+
+	/* Popover */
+	--color-popover: #18181b;
+	--color-popover-border: #52525b;
+	--popover-shadow: inset 0 1px 0 rgb(255 255 255 / 0.04), 0 12px 32px -6px rgb(0 0 0 / 0.7);
 
 	/* Identity / avatar */
 	--color-avatar-bg: #3f3f46; /* zinc-700 — 10.4:1 with white, two steps above --color-base */

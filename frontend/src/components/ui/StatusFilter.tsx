@@ -151,7 +151,7 @@ export function DropdownFilter({
 				<div
 					role="listbox"
 					aria-label={placeholder}
-					className="absolute right-0 mt-1.5 min-w-44 bg-canvas border border-border-strong rounded-lg shadow-2xl shadow-black/50 z-50 overflow-hidden"
+					className="absolute right-0 mt-1.5 min-w-44 popover-panel z-50 overflow-hidden"
 				>
 					<div className="py-1 px-1">
 						{!hideAll && (
@@ -165,7 +165,7 @@ export function DropdownFilter({
 									className={`w-full flex items-center justify-between px-3 py-1.5 text-sm cursor-pointer rounded text-left ${
 										!isActive
 											? "bg-primary-bg text-primary-text"
-											: "text-text-secondary hover:bg-surface/70"
+											: "text-text-secondary hover:bg-surface-raised"
 									}`}
 								>
 									<span>{allLabel}</span>
@@ -207,7 +207,7 @@ export function DropdownFilter({
 										option
 									)
 										? "bg-primary-bg text-primary-text"
-										: "text-text-secondary hover:bg-surface/70"
+										: "text-text-secondary hover:bg-surface-raised"
 								}`}
 							>
 								<span>{option.label}</span>

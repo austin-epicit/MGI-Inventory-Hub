@@ -22,6 +22,7 @@ export interface SaleRow {
 export interface SaleListParams {
 	search?: string;
 	status?: string;
+	excludeStatus?: string;
 	customerId?: string;
 	tier?: string;
 	from?: string;

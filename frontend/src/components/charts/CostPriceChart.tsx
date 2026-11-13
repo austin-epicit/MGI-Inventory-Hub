@@ -54,6 +54,8 @@ type Mode = "amounts" | "margin";
 // Sold price is a per-period sample: dashed, so it never reads as a configured price.
 const SOLD_DASH = "5 4";
 const LABEL_MAX = 24;
+// 11px text needs ~5px of air between rows; at 13 a list/sold pair of one tier read as one blot.
+const LABEL_GAP = 16;
 
 type Swatch = "dot" | "line" | "dash";
 
@@ -174,7 +176,7 @@ function EndLabelColumn({ series }: { series: EndSeries[] }) {
 		.filter((s): s is LabelSlot => s !== null);
 	if (anchored.length === 0) return null;
 	const slots = stackLabels(anchored, {
-		minGap: 13,
+		minGap: LABEL_GAP,
 		top: plot.y + 4,
 		bottom: plot.y + plot.height - 4,
 	});
@@ -330,7 +332,8 @@ function HeadlineStat({
 	const flat = hasDelta && Math.abs(deltaPct) < 0.05;
 	const good = hasDelta && (invertTone ? deltaPct < 0 : deltaPct > 0);
 	const DeltaIcon = flat ? Minus : hasDelta && deltaPct > 0 ? TrendingUp : TrendingDown;
-	const tone = flat ? "text-text-muted" : good ? "text-success-text" : "text-error-text";
+	// Red is reserved for errors; an unwelcome move is a warning, not a failure.
+	const tone = flat ? "text-text-muted" : good ? "text-success-text" : "text-warning-text";
 	return (
 		<div>
 			<div className="text-[10px] font-semibold uppercase tracking-wider text-text-muted">
@@ -366,9 +369,11 @@ function HeadlineStrip({ stats }: { stats: PriceHistory["stats"] }) {
 				deltaPct={stats.purchaseCostChangePct}
 				invertTone
 				sub={
-					stats.purchaseCostChangePct != null
-						? "vs first purchase in range"
-						: null
+					stats.lastPurchaseCost == null
+						? "No purchase in range"
+						: stats.purchaseCostChangePct != null
+							? "vs first purchase in range"
+							: "In selected range"
 				}
 			/>
 			<HeadlineStat label="Average cost" value={money(stats.averageCost)} />

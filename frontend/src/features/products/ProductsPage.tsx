@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { PackageSearch } from "lucide-react";
 import Thumb from "../../components/ui/Thumb";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import AdaptableTable from "../../components/ui/AdaptableTable";
+import AdaptableTable, { type ColumnClamp } from "../../components/ui/AdaptableTable";
 import EmptyState from "../../components/ui/EmptyState";
 import ExportButton from "../../components/ui/ExportButton";
 import FilterChips from "../../components/ui/FilterChips";
@@ -12,6 +12,7 @@ import ReportPagination from "../../components/ui/ReportPagination";
 import SearchBar from "../../components/ui/SearchBar";
 import { DropdownFilter } from "../../components/ui/StatusFilter";
 import { useDebouncedValue } from "../../hooks/useDebouncedValue";
+import { useMediaQuery } from "../../hooks/useMediaQuery";
 import { useReportSort } from "../../hooks/useReportSort";
 import { exportHref } from "../../lib/csv";
 import { formatDate, formatMoney, formatQty } from "../../lib/format";
@@ -45,10 +46,10 @@ const SORTABLE: Record<string, boolean> = {
 };
 const COLUMN_ALIGN: Record<string, "left" | "right"> = { onHand: "right", averageCost: "right" };
 // Name takes the flexible width, the rest stay tight so the table fits at 1440px.
-const CLAMP = {
-	sku: { maxWidth: "12rem" },
-	name: { maxWidth: "13rem" },
-	category: { maxWidth: "6rem" },
+const CLAMP: Record<string, ColumnClamp> = {
+	sku: { maxWidth: "8.5rem" },
+	name: { maxWidth: "13rem", lines: 2 },
+	category: { maxWidth: "5rem" },
 	brand: { maxWidth: "6rem" },
 };
 const GRADE_OPTIONS = [
@@ -58,7 +59,12 @@ const GRADE_OPTIONS = [
 const gradeFromUrl = (v: string | null) =>
 	GRADE_OPTIONS.some((o) => o.value === v) ? (v as ConditionGrade | "none") : null;
 const NOWRAP = () => "whitespace-nowrap";
-const CELL_CLASS = Object.fromEntries(Object.keys(HEADER_LABELS).map((k) => [k, NOWRAP]));
+// Name wraps (a nowrap <td> defeats the 2-line clamp); its floor stops auto layout
+// squeezing it to ~6rem once wrapping is allowed.
+const CELL_CLASS: Record<string, () => string> = {
+	...Object.fromEntries(Object.keys(HEADER_LABELS).map((k) => [k, NOWRAP])),
+	name: () => "min-w-40",
+};
 
 const toOptions = (xs: string[] | undefined) => (xs ?? []).map((v) => ({ value: v, label: v }));
 
@@ -86,6 +92,7 @@ export default function ProductsPage() {
 	const [page, setPage] = useState(0);
 	const [pageSize, setPageSize] = useState(50);
 	const { sort, tableProps } = useReportSort();
+	const narrow = useMediaQuery("(max-width: 1439.98px)"); // Brand is dropped so the table fits a 1366 laptop
 	const facets = useProductFacets();
 
 	// Any change to what is being asked for starts again from page 1.
@@ -153,7 +160,6 @@ export default function ProductsPage() {
 			return (
 				<Link
 					to={`/products/${row.id}`}
-					title={row.name}
 					onClick={(e) => e.stopPropagation()} // the row click would navigate a second time
 					className="text-text-link hover:underline"
 				>
@@ -350,6 +356,11 @@ export default function ProductsPage() {
 							headerLabels={HEADER_LABELS}
 							columnAlign={COLUMN_ALIGN}
 							columnClamp={CLAMP}
+							columnVisibility={
+								narrow
+									? { brand: false }
+									: undefined
+							}
 							cellClass={CELL_CLASS}
 							compact
 							cellRenderers={cellRenderers}

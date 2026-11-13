@@ -1,1 +1,17 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 28 28"><rect width="28" height="28" rx="7" fill="#1f6f4a"/><rect x="9" y="9" width="10" height="10" rx="2" fill="#c8e24a"/></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-58 0 604 604">
+	<style>
+		.ink { fill: #221e1f; stroke: #221e1f; }
+		@media (prefers-color-scheme: dark) { .ink { fill: #e4e4e7; stroke: #e4e4e7; } }
+	</style>
+	<path class="ink" d="M300 115 L115 300 L300 488 Z" stroke="none" />
+	<path d="M300 115 L487 300 L300 488 Z" fill="#f69622" />
+	<g class="ink" fill="none" stroke-width="17" stroke-linecap="butt">
+		<line x1="75" y1="263" x2="280" y2="60" fill="none" />
+		<line x1="75" y1="340" x2="280" y2="543" fill="none" />
+	</g>
+	<g class="ink" stroke-width="19" style="fill: none">
+		<circle cx="301" cy="40" r="23" />
+		<circle cx="36" cy="300" r="23" />
+		<circle cx="301" cy="563" r="23" />
+	</g>
+</svg>
